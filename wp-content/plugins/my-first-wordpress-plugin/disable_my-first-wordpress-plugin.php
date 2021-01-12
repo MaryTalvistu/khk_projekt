@@ -1,10 +1,10 @@
 <?php
 /*
 Plugin Name: My First plugin
-Plugin URI: 
+Plugin URI: https://mary-anntalvistu.ikt.khk.ee/wordpress/
 Description: This is my first WordPress Plugin
 Author: Mary-Ann Talvistu
-Author URI: http://pippinsplugins.com
+Author URI: https://mary-anntalvistu.ikt.khk.ee/wordpress/
 Version: 1.0
 
 
