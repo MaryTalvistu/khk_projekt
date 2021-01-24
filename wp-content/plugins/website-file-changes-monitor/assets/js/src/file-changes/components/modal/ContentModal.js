@@ -1,68 +1,79 @@
 /**
  * WordPress Modal.
  */
-import React, { Component } from 'react';
-import Modal from 'react-modal';
+import React, { Component } from 'react'
+import Modal from 'react-modal'
+import { CgList } from '@react-icons/all-files/cg/CgList'
 
 export default class ContentModal extends Component {
 
 	/**
 	 * Constructor.
 	 */
-	constructor() {
-		super();
+	constructor (props) {
+		super(props)
 
 		this.state = {
 			modalIsOpen: false
-		};
+		}
 
-		this.openModal = this.openModal.bind( this );
-		this.closeModal = this.closeModal.bind( this );
+		this.openModal = this.openModal.bind(this)
+		this.closeModal = this.closeModal.bind(this)
 	}
 
 	/**
 	 * Open modal.
 	 */
-	openModal() {
-		this.setState({modalIsOpen: true});
+	openModal () {
+		this.setState({ modalIsOpen: true })
 	}
 
 	/**
 	 * Close modal.
 	 */
-	closeModal() {
-		this.setState({modalIsOpen: false});
+	closeModal () {
+		this.setState({ modalIsOpen: false })
 	}
 
 	/**
 	 * Render component.
 	 */
-	render() {
-		const { eventFiles } = this.props;
+	render () {
+		const { eventFiles } = this.props
 
-		const filesTable = eventFiles.reduce( ( table, singleFile ) => {
-			table.push( <tr><td>{singleFile.file}</td></tr> );
-			return table;
-		}, []);
+		const filesTable = eventFiles.reduce((table, singleFile) => {
+			table.push(<tr>
+				<td>{singleFile.file}</td>
+			</tr>)
+			return table
+		}, [])
 
 		return (
 			<React.Fragment>
-				<button className="btn-event-content" onClick={this.openModal}><span className="dashicons dashicons-info"></span></button>
-				<Modal isOpen={this.state.modalIsOpen} onRequestClose={this.closeModal} style={modalStyles} contentLabel="WFCM Event File Changes">
+				<button className="wfcm-action-button btn-event-content"
+								data-tip={wfcmFileChanges.table.showListOfFiles}
+								onClick={this.openModal}>
+					<CgList size={24}/>
+				</button>
+				<Modal isOpen={this.state.modalIsOpen} onRequestClose={this.closeModal} style={modalStyles}
+							 contentLabel="WFCM Event File Changes">
 					<div className="wfcm-modal-header">
 						<h2>List of Event Files</h2>
-						<button className="button" onClick={this.closeModal}><span class="dashicons dashicons-no-alt"></span></button>
+						<button className="button" onClick={this.closeModal}><span class="dashicons dashicons-no-alt"></span>
+						</button>
 					</div>
 					<div className="wfcm-modal-body wfcm-modal-body--scrollable">
 						<p>Number of files: {eventFiles.length}</p>
 						<table className="wp-list-table widefat fixed striped">
-							<thead><td>Filename</td></thead>
+							<thead>
+							<td>Filename</td>
+							</thead>
 							<tbody>{filesTable}</tbody>
 						</table>
 					</div>
 				</Modal>
 			</React.Fragment>
-		);
+		)
 	}
 }
 
@@ -80,7 +91,7 @@ const modalStyles = {
 		width: '650px',
 		width: 'calc(100vw - 30%)'
 	}
-};
+}
 
-Modal.defaultStyles.overlay.backgroundColor = 'rgba(0,0,0,0.5)';
-Modal.setAppElement( '#wfcm-file-changes-view' );
+Modal.defaultStyles.overlay.backgroundColor = 'rgba(0,0,0,0.5)'
+Modal.setAppElement('#wfcm-file-changes-view')

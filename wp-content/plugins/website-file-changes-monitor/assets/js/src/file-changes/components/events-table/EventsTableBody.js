@@ -6,14 +6,22 @@ import EventsTableRow from './EventsTableRow';
 import { EventsContext } from '../context/EventsContext';
 
 export default class EventsTableBody extends Component {
+
 	render() {
 		if ( 0 < this.props.monitorEvents.length ) {
 			return (
 				<EventsContext.Consumer>
-					{ ({ events, selectEvent, markEventAsRead, excludeEvent }) => (
+					{ ({ events, selectEvent, markEventAsRead, excludeEvent, allowEventInCore, deleteEventsInFolder }) => (
 						<tbody>
 							{ events.map( singleEvent => (
-								<EventsTableRow event={singleEvent} selectEvent={selectEvent} markEventAsRead={markEventAsRead} excludeEvent={excludeEvent} />
+								<EventsTableRow
+									event={singleEvent}
+									selectEvent={selectEvent}
+									markEventAsRead={markEventAsRead}
+									excludeEvent={excludeEvent}
+									allowEventInCore={allowEventInCore}
+									deleteEventsInFolder={deleteEventsInFolder}
+								/>
 							) ) }
 						</tbody>
 					) }
@@ -25,4 +33,4 @@ export default class EventsTableBody extends Component {
 			);
 		}
 	}
-};
+}

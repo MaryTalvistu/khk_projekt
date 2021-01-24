@@ -1,6 +1,6 @@
 <?php
 /**
- * WFCM Admin Plugins.
+ * WFCM Plugins.
  *
  * @package wfcm
  */
@@ -10,12 +10,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Admin Plugins Class.
+ * Plugins Class.
  *
  * This class monitors the plugin install, uninstall, and
  * update events for file changes monitoring.
  */
-class WFCM_Admin_Plugins {
+class WFCM_Plugins {
 
 	/**
 	 * List of plugins already installed.
@@ -28,10 +28,12 @@ class WFCM_Admin_Plugins {
 	 * Constructor.
 	 */
 	public function __construct() {
-		$has_permission = ( current_user_can( 'install_plugins' ) || current_user_can( 'delete_plugins' ) || current_user_can( 'update_plugins' ) );
+		add_action( 'admin_init', array( $this, 'on_admin_init' ) );
+	}
 
-		if ( $has_permission ) {
-			add_action( 'admin_init', array( $this, 'set_old_plugins' ) );
+	public function on_admin_init() {
+		if ( current_user_can( 'install_plugins' ) || current_user_can( 'delete_plugins' ) || current_user_can( 'update_plugins' ) ) {
+			$this->set_old_plugins();
 			add_action( 'shutdown', array( $this, 'monitor_plugin_events' ) );
 		}
 	}
@@ -50,7 +52,7 @@ class WFCM_Admin_Plugins {
 		global $pagenow;
 
 		// Set initial variables.
-		$action = isset( $_POST['action'] ) ? sanitize_text_field( wp_unslash( $_POST['action'] ) ) : false; // @codingStandardsIgnoreLine
+		$action          = isset( $_POST['action'] ) ? sanitize_text_field( wp_unslash( $_POST['action'] ) ) : false; // @codingStandardsIgnoreLine
 		$is_plugins_page = false;
 		$is_update_page  = false;
 
@@ -71,54 +73,82 @@ class WFCM_Admin_Plugins {
 			$added_plugin = reset( $plugin );
 
 			if ( false !== $added_plugin ) {
-				wfcm_add_site_plugin( dirname( $added_plugin ) );
+				self::process_added_site_plugins( [ $added_plugin ] );
 			}
 		}
 
 		// Handle plugin uninstall event.
 		if ( 'delete-plugin' === $action && current_user_can( 'delete_plugins' ) && isset( $_POST['plugin'] ) ) { // @codingStandardsIgnoreLine
 			$deleted_plugin = sanitize_text_field( wp_unslash( $_POST['plugin'] ) ); // @codingStandardsIgnoreLine
-			$deleted_plugin = dirname( $deleted_plugin );
-
-			if ( $deleted_plugin ) {
-				wfcm_skip_plugin_scan( $deleted_plugin, 'uninstall' );
-				wfcm_remove_site_plugin( $deleted_plugin );
-			}
+			self::process_deleted_site_plugins( [ $deleted_plugin ] );
 		} elseif ( $is_plugins_page && isset( $_POST['verify-delete'] ) && 'delete-selected' === $action && isset( $_POST['checked'] ) ) { // phpcs:ignore
 			// Get plugins.
 			$plugins = array_map( 'sanitize_text_field', wp_unslash( $_POST['checked'] ) ); // phpcs:ignore
-
-			foreach ( $plugins as $plugin ) {
-				$deleted_plugin = dirname( $plugin );
-
-				if ( $deleted_plugin ) {
-					wfcm_skip_plugin_scan( $deleted_plugin, 'uninstall' );
-					wfcm_remove_site_plugin( $deleted_plugin );
-				}
-			}
+			self::process_deleted_site_plugins( $plugins );
 		}
 
 		// Handle plugin update event.
 		if ( in_array( $action, $update_actions, true ) && current_user_can( 'update_plugins' ) && isset( $_POST['plugin'] ) ) { // @codingStandardsIgnoreLine
 			$updated_plugin = sanitize_text_field( wp_unslash( $_POST['plugin'] ) ); // @codingStandardsIgnoreLine
-			$updated_plugin = dirname( $updated_plugin );
-
-			if ( $updated_plugin ) {
-				wfcm_skip_plugin_scan( $updated_plugin, 'update' );
-			}
+			self::process_updated_site_plugins( [ $updated_plugin ] );
 		} elseif ( $is_update_page && in_array( $action, $update_actions, true ) && current_user_can( 'update_plugins' ) && isset( $_GET['plugins'] ) ) { // phpcs:ignore
 			$plugins = sanitize_text_field( wp_unslash( $_GET['plugins'] ) ); // phpcs:ignore
 			$plugins = explode( ',', $plugins );
+			self::process_updated_site_plugins( $plugins );
+		}
+	}
 
-			foreach ( $plugins as $plugin ) {
-				$updated_plugin = dirname( $plugin );
+	/**
+	 * @param array $added_plugins Array of the basename paths of the plugins' main files.
+	 */
+	public static function process_added_site_plugins( $added_plugins ) {
+		if ( empty( $added_plugins ) ) {
+			return;
+		}
 
-				if ( $updated_plugin ) {
-					wfcm_skip_plugin_scan( $updated_plugin, 'update' );
-				}
+		foreach ( $added_plugins as $added_plugin ) {
+			wfcm_add_site_plugin( dirname( $added_plugin ) );
+		}
+	}
+
+	/**
+	 * @param array $plugins
+	 *
+	 * @return mixed
+	 */
+	public static function process_deleted_site_plugins( $plugins ) {
+		if ( empty( $plugins ) ) {
+			return;
+		}
+
+		foreach ( $plugins as $plugin ) {
+			$deleted_plugin = dirname( $plugin );
+
+			if ( $deleted_plugin ) {
+				wfcm_skip_plugin_scan( $deleted_plugin, 'uninstall' );
+				wfcm_remove_site_plugin( $deleted_plugin );
+			}
+		}
+	}
+
+	/**
+	 * @param array $plugins
+	 *
+	 * @return mixed
+	 */
+	public static function process_updated_site_plugins( $plugins ) {
+		if ( empty( $plugins ) ) {
+			return;
+		}
+
+		foreach ( $plugins as $plugin ) {
+			$updated_plugin = dirname( $plugin );
+
+			if ( $updated_plugin ) {
+				wfcm_skip_plugin_scan( $updated_plugin, 'update' );
 			}
 		}
 	}
 }
 
-new WFCM_Admin_Plugins();
+new WFCM_Plugins();

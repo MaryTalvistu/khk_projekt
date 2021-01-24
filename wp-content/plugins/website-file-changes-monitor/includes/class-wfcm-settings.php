@@ -80,25 +80,34 @@ class WFCM_Settings {
 	public static function get_monitor_settings() {
 		$default_dirs  = array_keys( wfcm_get_server_directories( 'display' ) );
 		$content_dir   = trailingslashit( WP_CONTENT_DIR );
-		$excluded_dirs = array( $content_dir . 'cache', $content_dir . 'upgrade' );
+		$default_excluded_dirs = array( $content_dir . 'cache', $content_dir . 'upgrade' );
+		$default_excluded_extensions = array( 'jpg', 'jpeg', 'png', 'bmp', 'pdf', 'txt', 'log', 'mo', 'po', 'mp3', 'wav', 'gif', 'ico', 'jpe', 'psd', 'raw', 'svg', 'tif', 'tiff', 'aif', 'flac', 'm4a', 'oga', 'ogg', 'ra', 'wma', 'asf', 'avi', 'mkv', 'mov', 'mp4', 'mpe', 'mpeg', 'mpg', 'ogv', 'qt', 'rm', 'vob', 'webm', 'wm', 'wmv', 'json' );
 
 		return array(
-			'enabled'              => self::get_setting( 'keep-log', 'yes' ),
-			'debug-logging'        => self::get_setting( 'debug-logging', false ),
-			'delete-data'          => self::get_setting( 'delete-data', false ),
-			'type'                 => self::get_setting( 'scan-type', array( 'added', 'deleted', 'modified' ) ),
-			'frequency'            => self::get_setting( 'scan-frequency', 'daily' ),
-			'hour'                 => self::get_setting( 'scan-hour', '02' ),
-			'day'                  => self::get_setting( 'scan-day', '1' ),
-			'date'                 => self::get_setting( 'scan-date', '01' ),
-			'directories'          => self::get_setting( 'scan-directories', $default_dirs ),
-			'file-size'            => self::get_setting( 'scan-file-size', 5 ),
-			'exclude-dirs'         => self::get_setting( 'scan-exclude-dirs', $excluded_dirs ),
-			'exclude-files'        => self::get_setting( 'scan-exclude-files', array() ),
-			'exclude-exts'         => self::get_setting( 'scan-exclude-exts', array( 'jpg', 'jpeg', 'png', 'bmp', 'pdf', 'txt', 'log', 'mo', 'po', 'mp3', 'wav', 'gif', 'ico', 'jpe', 'psd', 'raw', 'svg', 'tif', 'tiff', 'aif', 'flac', 'm4a', 'oga', 'ogg', 'ra', 'wma', 'asf', 'avi', 'mkv', 'mov', 'mp4', 'mpe', 'mpeg', 'mpg', 'ogv', 'qt', 'rm', 'vob', 'webm', 'wm', 'wmv', 'json' ) ),
-			'scan-dev-folders'     => self::get_setting( 'scan-dev-folders', false ),
-			self::NOTIFY_TYPE      => self::get_setting( self::NOTIFY_TYPE, 'admin' ),
-			self::NOTIFY_ADDRESSES => self::get_setting( self::NOTIFY_ADDRESSES, array() ),
+			'enabled'                                  => self::get_setting( 'keep-log', 'yes' ),
+			'debug-logging'                            => self::get_setting( 'debug-logging', false ),
+			'delete-data'                              => self::get_setting( 'delete-data', false ),
+			'type'                                     => self::get_setting( 'scan-type', WFCM_REST_API::get_event_types() ),
+			'frequency'                                => self::get_setting( 'scan-frequency', 'daily' ),
+			'hour'                                     => self::get_setting( 'scan-hour', '02' ),
+			'day'                                      => self::get_setting( 'scan-day', '1' ),
+			'date'                                     => self::get_setting( 'scan-date', '01' ),
+			'directories'                              => self::get_setting( 'scan-directories', $default_dirs ),
+			'wp-repo-core-checksum-validation-enabled' => self::get_setting( 'scan-wp-repo-core-checksum-validation-enabled', 'yes' ),
+			'file-size'                                => self::get_setting( 'scan-file-size', 5 ),
+			'exclude-dirs'                             => self::get_setting( 'scan-exclude-dirs', $default_excluded_dirs ),
+			'exclude-files'                            => self::get_setting( 'scan-exclude-files', array( 'wp-config-sample.php' ) ),
+			'exclude-exts'                             => self::get_setting( 'scan-exclude-exts', $default_excluded_extensions ),
+			'scan-dev-folders'                         => self::get_setting( 'scan-dev-folders', false ),
+			self::NOTIFY_TYPE                          => self::get_setting( self::NOTIFY_TYPE, 'admin' ),
+			self::NOTIFY_ADDRESSES                     => self::get_setting( self::NOTIFY_ADDRESSES, array() ),
+			'email-changes-limit'                      => self::get_setting( 'email-changes-limit', 10 ),
+			'empty-email-allowed'                      => self::get_setting( 'empty-email-allowed', 'no' ),
+			'allowed-in-core-dirs'                     => self::get_setting( 'scan-allowed-in-core-dirs', [] ),
+			'allowed-in-core-files'                    => self::get_setting( 'scan-allowed-in-core-files', array(
+				'wp-config.php',
+				'.htaccess'
+			) )
 		);
 	}
 

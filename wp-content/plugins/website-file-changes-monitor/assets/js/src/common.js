@@ -14,8 +14,8 @@ window.addEventListener( 'load', function() {
 	const excludeLargeFileLinks = document.querySelectorAll( 'a[href="#wfcm_exclude_large_file"]' );
 
 	// Add Exclude Item.
-	[ ...excludeLargeFileLinks ].forEach( excludeLargeFileLinks => {
-		excludeLargeFileLinks.addEventListener( 'click', wfcmExcludeLargeFile );
+	[ ...excludeLargeFileLinks ].forEach( excludeLargeFileLink => {
+		excludeLargeFileLink.addEventListener( 'click', wfcmExcludeLargeFile );
 	});
 });
 

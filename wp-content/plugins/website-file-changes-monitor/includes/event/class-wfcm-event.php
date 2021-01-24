@@ -43,9 +43,10 @@ abstract class WFCM_Event {
 	 * @var array
 	 */
 	protected $data = array(
-		'event_type' => '',       // Event type: added, modified, or deleted.
-		'status'     => 'unread', // Event status.
-		'content'    => '',       // Content.
+		'event_type'    => '',       // Event type: added, modified, or deleted.
+		'status'        => 'unread', // Event status.
+		'content'       => '',       // Content.
+		'event_context' => '',       // Event context.
 	);
 
 	/**
@@ -162,7 +163,7 @@ abstract class WFCM_Event {
 	 *
 	 * @param string $key   - Meta key.
 	 * @param mixed  $value - Meta value.
-	 * @return mixed
+	 * @return mixed|WP_Error
 	 */
 	protected function set_meta( $key, $value ) {
 		if ( isset( $this->data[ $key ] ) ) {
@@ -281,5 +282,25 @@ abstract class WFCM_Event {
 	 */
 	public function get_content_type() {
 		return $this->get_meta( 'content_type' );
+	}
+
+	/**
+	 * Set content type.
+	 *
+	 * @param string $event_context - Content type.
+	 *
+	 * @return string
+	 */
+	public function set_event_context( $event_context ) {
+		return $this->set_meta( 'event_context', $event_context );
+	}
+
+	/**
+	 * Returns event context.
+	 *
+	 * @return string
+	 */
+	public function get_event_context() {
+		return $this->get_meta( 'event_context' );
 	}
 }

@@ -17,30 +17,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WFCM_Admin {
 
 	/**
-	 * Plugin Admin Notices.
-	 *
-	 * @var array
-	 */
-	private static $admin_notices = array();
-
-	/**
-	 * Allowed HTML.
-	 *
-	 * @var array
-	 */
-	private static $allowed_html = array(
-		'a' => array(
-			'href'   => array(),
-			'target' => array(),
-		),
-	);
-
-	/**
 	 * Constructor.
 	 */
 	public function __construct() {
 		add_action( 'init', array( $this, 'include_admin_files' ) );
-		add_action( 'admin_notices', array( $this, 'show_admin_notices' ) );
 		add_action( 'admin_footer', array( $this, 'admin_footer_scripts' ) );
 		// Dequeue conflicting scripts.
 		add_action( 'admin_print_scripts', array( $this, 'dequeue_conflicting_scripts' ) );
@@ -50,50 +30,17 @@ class WFCM_Admin {
 	 * Include Admin Files.
 	 */
 	public function include_admin_files() {
+		require_once trailingslashit( dirname( __FILE__ ) ) . 'class-wfcm-admin-ajax.php';
 		require_once trailingslashit( dirname( __FILE__ ) ) . 'class-wfcm-admin-menus.php';
-		require_once trailingslashit( dirname( __FILE__ ) ) . 'class-wfcm-admin-plugins.php';
-		require_once trailingslashit( dirname( __FILE__ ) ) . 'class-wfcm-admin-themes.php';
-		require_once trailingslashit( dirname( __FILE__ ) ) . 'class-wfcm-admin-system.php';
-	}
-
-	/**
-	 * Show plugin admin notices (if any).
-	 */
-	public function show_admin_notices() {
-		if ( ! is_multisite() && ! current_user_can( 'manage_options' ) ) {
-			return;
-		} elseif ( is_multisite() && ! is_super_admin() ) {
-			return;
-		}
-
-		// Get admin notices option.
-		$admin_notices = wfcm_get_setting( 'admin-notices', array() );
-	}
-
-	/**
-	 * Display notice.
-	 *
-	 * @param string $key - Notice key.
-	 */
-	private function display_notice( $key ) {
-		$notice = self::$admin_notices[ $key ];
-		?>
-		<div id="wfcm-admin-notice-<?php echo esc_attr( $key ); ?>" class="notice notice-<?php echo esc_attr( $notice['type'] ); ?> wfcm-admin-notice is-dismissible">
-			<p><?php echo wp_kses( $notice['message'], self::$allowed_html ); ?></p>
-		</div>
-		<?php
 	}
 
 	/**
 	 * Render admin footer scripts (if needed).
 	 */
 	public function admin_footer_scripts() {
-		// Check for debug mode.
-		$suffix = ( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) ? '' : '.min';
-
 		wp_register_script(
 			'wfcm-common',
-			WFCM_BASE_URL . 'assets/js/dist/common' . $suffix . '.js',
+			WFCM_BASE_URL . 'assets/js/dist/common.js',
 			array(),
 			( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) ? filemtime( WFCM_BASE_DIR . 'assets/js/dist/common.js' ) : WFCM_VERSION,
 			true

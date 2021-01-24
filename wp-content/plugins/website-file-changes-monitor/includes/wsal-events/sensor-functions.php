@@ -42,7 +42,6 @@ function wfcm_wsal_add_custom_events_path( $paths ) {
  * @since  1.0.0
  */
 function wfcm_wsal_add_custom_meta_format( $value, $name ) {
-	$check_value = (string) $value;
 	$wcfm_modified_page = '';
 	$redirect_args      = array(
 		'page' => 'wfcm-file-changes',
@@ -54,7 +53,7 @@ function wfcm_wsal_add_custom_meta_format( $value, $name ) {
 		$wcfm_modified_page = add_query_arg( $redirect_args, network_admin_url( 'admin.php' ) );
 	}
 	if ( '%ReviewChangesLink%' === $name ) {
-			return '<a target="_blank" href="' . $wcfm_modified_page . '">' . __( 'Review Changes', 'website-file-changes-monitor' ) . '</a>';
+			return '<a target="_blank" href="' . $wcfm_modified_page . '">' . __( 'Review changes', 'website-file-changes-monitor' ) . '</a>';
 	}
 
 	$wcfm_modified_page = '';

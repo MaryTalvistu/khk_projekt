@@ -9,11 +9,13 @@ window.addEventListener( 'load', function() {
 	const scanWrapper = document.getElementById( 'scan-time-row' );
 	const scanDay = $( 'select[name="wfcm-settings[scan-day]"]' ).parentNode;
 	const scanDate = $( 'select[name="wfcm-settings[scan-date]"]' ).parentNode;
-	const excludeAdd = document.querySelectorAll( '.wfcm-files-container .add' );
-	const excludeRemove = document.querySelectorAll( '.wfcm-files-container .remove' );
+	const addToListButtons = document.querySelectorAll( '.wfcm-files-container .add' );
+	const removeFromListButtons = document.querySelectorAll( '.wfcm-files-container .remove' );
 	const manualScanStart = $( '#wfcm-scan-start' );
 	const manualScanStop = $( '#wfcm-scan-stop' );
 	const manualScanResponse = $( '#wfcm-scan-response' );
+	const sendTestEmailButton = $( '#wfcm-send-test-email');
+	const testEmailResponse = $( '#wfcm-test-email-response');
 
 	// Frequency handler.
 	frequencySelect.addEventListener( 'change', function() {
@@ -34,10 +36,7 @@ window.addEventListener( 'load', function() {
 
 		if ( 'weekly' === frequency ) {
 			scanDay.classList.remove( 'hidden' );
-		} else if ( 'monthly' === frequency ) {
-			scanDate.classList.remove( 'hidden' );
 		}
-
 
 		if ( 'hourly' === frequency ) {
 			scanWrapper.classList.add( 'faded-row' );
@@ -53,85 +52,115 @@ window.addEventListener( 'load', function() {
 	}
 
 	// Add Exclude Item.
-	[ ...excludeAdd ].forEach( excludeAddButton => {
-		excludeAddButton.addEventListener( 'click', addToExcludeList );
+	[ ...addToListButtons ].forEach( excludeAddButton => {
+		excludeAddButton.addEventListener( 'click', addToList );
 	});
 
 	// Remove Exclude Item(s).
-	[ ...excludeRemove ].forEach( excludeRemoveButton => {
-		excludeRemoveButton.addEventListener( 'click', removeFromExcludeList );
+	[ ...removeFromListButtons ].forEach( excludeRemoveButton => {
+		excludeRemoveButton.addEventListener( 'click', removeFromList );
 	});
 
 	/**
-	 * Add item to exclude list.
+	 * Add item to a list.
 	 *
 	 * @param {Event} e Event object.
 	 */
-	function addToExcludeList( e ) {
+	function addToList( e ) {
 		let pattern = '';
-		const excludeType = e.target.dataset.excludeType;
+		const objectType = e.target.dataset.objectType;
+		const listType = e.target.dataset.listType;
 
-		if ( 'dirs' === excludeType ) {
+		if ( 'dirs' === objectType ) {
 			pattern = /^\s*[a-z-._\d,\s/]+\s*$/i;
-		} else if ( 'files' === excludeType ) {
+		} else if ( 'files' === objectType ) {
 			pattern = /^\s*[a-z-._\d,\s]+\s*$/i;
-		} else if ( 'exts' === excludeType ) {
+		} else if ( 'exts' === objectType ) {
 			pattern = /^\s*[a-z-._\d,\s]+\s*$/i;
 		}
 
-		const excludeList = $( `#wfcm-exclude-${excludeType}-list` );
-		const excludeNameInput = e.target.parentNode.querySelector( '.name' );
-		const excludeName = excludeNameInput.value;
+		const newItemNameInput = e.target.parentNode.querySelector( '.name' );
+		const newItemName = newItemNameInput.value;
 
-		if ( excludeName.match( pattern ) ) {
-			const excludeItem = document.createElement( 'span' );
-			const excludeItemInput = document.createElement( 'input' );
-			const excludeItemLabel = document.createElement( 'label' );
-
-			excludeItemInput.type = 'checkbox';
-			excludeItemInput.checked = true;
-			excludeItemInput.name = `wfcm-settings[scan-exclude-${excludeType}][]`;
-			excludeItemInput.id = excludeName;
-			excludeItemInput.value = excludeName;
-
-			excludeItemLabel.setAttribute( 'for', excludeName );
-			excludeItemLabel.innerHTML = excludeName;
-
-			excludeItem.appendChild( excludeItemInput );
-			excludeItem.appendChild( excludeItemLabel );
-			excludeList.appendChild( excludeItem );
-			excludeNameInput.value = '';
+		if ( null === newItemName.match( pattern ) ) {
+			if ('dirs' === objectType) {
+				alert(wfcmSettingsData.dirInvalid); // eslint-disable-line no-undef
+			} else if ('files' === objectType) {
+				alert(wfcmSettingsData.fileInvalid); // eslint-disable-line no-undef
+			} else if ('exts' === objectType) {
+				alert(wfcmSettingsData.extensionInvalid); // eslint-disable-line no-undef
+			}
 		} else {
-			if ( 'dirs' === excludeType ) {
-				alert( wfcmSettingsData.dirInvalid ); // eslint-disable-line no-undef
-			} else if ( 'files' === excludeType ) {
-				alert( wfcmSettingsData.fileInvalid ); // eslint-disable-line no-undef
-			} else if ( 'exts' === excludeType ) {
-				alert( wfcmSettingsData.extensionInvalid ); // eslint-disable-line no-undef
+
+			const popupMessage = e.target.dataset.triggerPopup;
+			if (!popupMessage) {
+				_addItemToList(newItemNameInput, newItemName, listType, objectType);
+			} else {
+				jQuery.confirm({
+					title: e.target.dataset.triggerPopupTitle,
+					content: popupMessage,
+					theme: 'react-confirm-alert',
+					animateFromElement: true,
+					draggable: false,
+					buttons: {
+						ok: {
+							text: "OK",
+							btnClass: 'btn-primary',
+							keys: ['enter'],
+							action: function () {
+								_addItemToList(newItemNameInput, newItemName, listType, objectType);
+							}
+						}
+					}
+				});
 			}
 		}
 	}
 
+	function _addItemToList(newItemNameInput, newItemName, listType, objectType ) {
+		const targetList = $( `#wfcm-${listType}-${objectType}-list` );
+		const newItem = document.createElement( 'span' );
+		const newItemId = `${listType}-${objectType}-${newItemName}`;
+		const newItemInput = document.createElement( 'input' );
+		const newItemLabel = document.createElement( 'label' );
+
+		newItemInput.type = 'checkbox';
+		newItemInput.checked = true;
+		newItemInput.name = `wfcm-settings[scan-${listType}-${objectType}][]`;
+		newItemInput.id = newItemId;
+		newItemInput.value = newItemName;
+
+		newItemLabel.setAttribute( 'for', newItemId );
+		newItemLabel.innerHTML = newItemName;
+
+		newItem.appendChild( newItemInput );
+		newItem.appendChild( newItemLabel );
+		targetList.appendChild( newItem );
+		newItemNameInput.value = '';
+	}
 	/**
-	 * Remove item from exclude list.
+	 * Remove item from a list.
 	 *
 	 * @param {Event} e Event object.
 	 */
-	function removeFromExcludeList( e ) {
-		const excludeItems = [ ...e.target.parentNode.querySelectorAll( '.exclude-list input[type=checkbox]' ) ];
-		let removedValues = [];
+	function removeFromList( e ) {
+		const objectType = e.target.dataset.objectType;
+		const listType = e.target.dataset.listType;
+		const targetListId = `wfcm-${listType}-${objectType}-list`;
+		const allItems = [ ...e.target.parentNode.querySelectorAll( '#' + targetListId + ' input[type=checkbox]' ) ];
 
-		for ( let index = 0; index < excludeItems.length; index++ ) {
-			if ( ! excludeItems[index].checked ) {
-				removedValues.push( excludeItems[index].value );
+		let valuesToRemove = [];
+		for ( let index = 0; index < allItems.length; index++ ) {
+			if ( ! allItems[index].checked ) {
+				valuesToRemove.push( allItems[index].value );
 			}
 		}
 
-		if ( removedValues.length ) {
-			for ( let index = 0; index < removedValues.length; index++ ) {
-				let excludeItem = $( 'input[value="' + removedValues[index] + '"]' );
-				if ( excludeItem ) {
-					excludeItem.parentNode.remove();
+		if ( valuesToRemove.length ) {
+			for ( let index = 0; index < valuesToRemove.length; index++ ) {
+				let itemToRemove = $( 'input[value="' + valuesToRemove[index] + '"]' );
+				if ( itemToRemove ) {
+					itemToRemove.parentNode.remove();
 				}
 			}
 		}
@@ -230,6 +259,46 @@ window.addEventListener( 'load', function() {
 			})
 			.catch( error => {
 				console.log( error ); // eslint-disable-line no-console
+			});
+	});
+
+	/**
+	 * Send request to send a test email.
+	 */
+	sendTestEmailButton.addEventListener( 'click', function( e ) {
+		e.target.value = wfcmSettingsData.emailSending; // eslint-disable-line no-undef
+		e.target.disabled = true;
+		testEmailResponse.classList.remove( 'notice', 'notice-error' );
+		testEmailResponse.classList.add( 'hidden' );
+
+		// Rest request object.
+		const request = new Request( `${wfcmSettingsData.adminAjax}?action=wfcm_send_test_email&security=${wfcmSettingsData.restRequestNonce}`, { // eslint-disable-line no-undef
+			method: 'GET',
+			headers: {
+				'X-WP-Nonce': wfcmSettingsData.restRequestNonce // eslint-disable-line no-undef
+			}
+		});
+
+		// Send the request.
+		fetch( request )
+			.then( response => response.json() )
+			.then( data => {
+				if ( data && data.success === true ) {
+					e.target.value = wfcmSettingsData.emailSent; // eslint-disable-line no-undef
+				} else {
+					e.target.value = wfcmSettingsData.sendEmail; // eslint-disable-line no-undef
+					testEmailResponse.classList.add( 'notice', 'notice-error' );
+					testEmailResponse.classList.remove( 'hidden' );
+				}
+
+				e.target.disabled = false;
+			})
+			.catch( error => {
+				e.target.value = wfcmSettingsData.sendEmail; // eslint-disable-line no-undef
+				e.target.disabled = false;
+				console.log( error ); // eslint-disable-line no-console
+				testEmailResponse.classList.add( 'notice', 'notice-error' );
+				testEmailResponse.classList.remove( 'hidden' );
 			});
 	});
 });

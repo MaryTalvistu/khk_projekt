@@ -5,7 +5,6 @@ import React, { Component } from 'react';
 import EventsTable from '../events-table';
 import Navigation from '../navigation';
 import { EventsProvider } from '../context/EventsContext';
-import ScanModal from '../modal/ScanModal';
 
 export default class AddedFilesTable extends Component {
 	render() {

@@ -91,10 +91,14 @@ class WFCM_Update_Runner extends WFCM_AbstractUpdateWrapper implements WFCM_Upda
 		// require the classes.
 		require_once WFCM_BASE_DIR . 'includes/update/class-wfcm-remap-options.php';
 		require_once WFCM_BASE_DIR . 'includes/update/class-wfcm-add-json-to-excluded-filetypes.php';
+		require_once WFCM_BASE_DIR . 'includes/update/class-wfcm-reset-to-initial-scan.php';
+		require_once WFCM_BASE_DIR . 'includes/update/class-wfcm-convert-monthly-scan-to-weekly.php';
 
 		// Instantiate the classes.
-		$options_mapper   = new WFCM_RemapOptions( $this->old_version, $this->new_version );
-		$exclude_json_ext = new WFCM_AddJSONToExcludedFileTypes( $this->old_version, $this->new_version );
+		new WFCM_RemapOptions( $this->old_version, $this->new_version );
+		new WFCM_AddJSONToExcludedFileTypes( $this->old_version, $this->new_version );
+		new WFCM_ResetToInitialScan( $this->old_version, $this->new_version );
+		new WFCM_ConvertMonthlyScanToWeekly( $this->old_version, $this->new_version );
 	}
 
 }

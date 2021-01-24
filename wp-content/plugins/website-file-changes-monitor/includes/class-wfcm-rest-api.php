@@ -38,11 +38,33 @@ class WFCM_REST_API {
 	public static $mark_all_read_base = '/mark-all-read';
 
 	/**
+	 * Base to use in REST requests for marking events within folder as read.
+	 *
+	 * @var string
+	 */
+	public static $mark_read_dir = '/mark-read-dir';
+
+	/**
 	 * Admin notices base.
 	 *
 	 * @var string
 	 */
 	public static $admin_notices = '/admin-notices';
+
+	/**
+	 * Base to use in REST requests for allowing files or directories in the site root or WP core area.
+	 *
+	 * @var string
+	 * @since 1.7.0
+	 */
+	public static $allow_in_core = '/allow-in-core';
+
+	/**
+	 * How many batch events are processed in one go?
+	 *
+	 * @var int
+	 */
+	private static $batch_size = 50;
 
 	/**
 	 * Constructor.
@@ -64,7 +86,7 @@ class WFCM_REST_API {
 			array(
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( $this, 'scan_start' ),
-				'permission_callback' => function() {
+				'permission_callback' => function () {
 					return current_user_can( 'manage_options' );
 				},
 			)
@@ -77,7 +99,7 @@ class WFCM_REST_API {
 			array(
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( $this, 'scan_stop' ),
-				'permission_callback' => function() {
+				'permission_callback' => function () {
 					return current_user_can( 'manage_options' );
 				},
 			)
@@ -95,13 +117,13 @@ class WFCM_REST_API {
 			array(
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( $this, 'get_events' ),
-				'permission_callback' => function() {
+				'permission_callback' => function () {
 					return current_user_can( 'manage_options' );
 				},
 				'args'                => [
 					'event_type' => [
 						'validate_callback' => function ( $param, $request, $key ) {
-							return in_array( $param, WFCM_REST_API::get_event_types(), true );
+							return $this->validate_event_type( $param );
 						}
 					]
 				]
@@ -115,12 +137,12 @@ class WFCM_REST_API {
 			array(
 				'methods'             => WP_REST_Server::DELETABLE,
 				'callback'            => array( $this, 'delete_event' ),
-				'permission_callback' => function() {
+				'permission_callback' => function () {
 					return current_user_can( 'manage_options' );
 				},
 				'args'                => array(
-					'event_id' => [
-						'validate_callback'   => function ( $param, $request, $key ) {
+					'event_id'    => [
+						'validate_callback' => function ( $param, $request, $key ) {
 							return is_numeric( $param );
 						},
 					],
@@ -138,24 +160,90 @@ class WFCM_REST_API {
 			)
 		);
 
-		// Register rest route for removing an event.
+		// Register rest route for removing events.
 		register_rest_route(
 			WFCM_REST_NAMESPACE,
 			self::$mark_all_read_base . '/(?P<event_type>[\S]+)',
 			array(
 				'methods'             => WP_REST_Server::DELETABLE,
 				'callback'            => array( $this, 'delete_events' ),
-				'permission_callback' => function() {
+				'permission_callback' => function () {
 					return current_user_can( 'manage_options' );
 				},
 				'args'                => [
 					'event_type' => [
 						'validate_callback' => function ( $param, $request, $key ) {
-							return in_array( $param, array_merge( WFCM_REST_API::get_event_types(), array( 'all' ) ), true );
+							return $this->validate_event_type( $param );
 						}
 					]
 				]
 			)
+		);
+
+		//  register rest route for adding files and folders to the list of allowed in site root and/or WordPress core
+		//  folders
+		register_rest_route(
+			WFCM_REST_NAMESPACE,
+			self::$allow_in_core . '/(?P<event_id>[\d]+)',
+			array(
+				'methods'             => WP_REST_Server::EDITABLE,
+				'callback'            => array( $this, 'allow_event_in_core' ),
+				'permission_callback' => function () {
+					return current_user_can( 'manage_options' );
+				},
+				'args'                => array(
+					'event_id'   => [
+						'validate_callback' => function ( $param, $request, $key ) {
+							return is_numeric( $param );
+						},
+					],
+					'targetType' => array(
+						'type'              => 'string',
+						'default'           => 'file',
+						'description'       => __( 'The type of target, i.e., file or directory.', 'website-file-changes-monitor' ),
+						'validate_callback' => function ( $param, $request, $key ) {
+							return in_array( $param, [ 'dir', 'file' ] );
+						},
+					),
+				),
+			)
+		);
+
+		// Register rest route for deleting events within a specific folder.
+		register_rest_route(
+			WFCM_REST_NAMESPACE,
+			self::$mark_read_dir,
+			array(
+				'methods'             => WP_REST_Server::DELETABLE,
+				'callback'            => array( $this, 'delete_events_within_folder' ),
+				'permission_callback' => function () {
+					return current_user_can( 'manage_options' );
+				}
+			)
+		);
+
+	}
+
+	public function validate_event_type( $value ) {
+		if ( 'all' === $value ) {
+			return true;
+		}
+
+		return in_array( preg_replace( '/-files/', '', $value ), WFCM_REST_API::get_event_types(), true );
+	}
+
+	/**
+	 * Get a list of supported event types.
+	 *
+	 * @method get_event_types
+	 * @return array
+	 * @since  1.5.0
+	 */
+	public static function get_event_types() {
+		return array(
+			'added',
+			'modified',
+			'deleted',
 		);
 	}
 
@@ -170,12 +258,12 @@ class WFCM_REST_API {
 			array(
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( $this, 'dismiss_admin_notice' ),
-				'permission_callback' => function() {
+				'permission_callback' => function () {
 					return current_user_can( 'manage_options' );
 				},
-				'args' => [
+				'args'                => [
 					'noticeKey' => [
-						'validate_callback'   => function ( $param ) {
+						'validate_callback' => function ( $param ) {
 							return filter_var( $param, FILTER_SANITIZE_STRING );
 						}
 					]
@@ -199,6 +287,7 @@ class WFCM_REST_API {
 		$last_scan_time  = wfcm_get_setting( 'last-scan-timestamp', false );
 		$last_scan_time  = $last_scan_time + ( get_option( 'gmt_offset' ) * 60 * 60 );
 		$last_scan_time  = date( $datetime_format, $last_scan_time );
+
 		return $last_scan_time;
 	}
 
@@ -214,20 +303,10 @@ class WFCM_REST_API {
 	}
 
 	/**
-	 * Check if scan stop flag option is set.
-	 *
-	 * @return string|null
-	 */
-	private function check_scan_stop() {
-		global $wpdb;
-		$options_table = $wpdb->prefix . 'options';
-		return $wpdb->get_var( "SELECT option_value FROM $options_table WHERE option_name = 'wfcm-scan-stop'" ); // phpcs:ignore
-	}
-
-	/**
 	 * REST API callback for fetching created file events.
 	 *
 	 * @param WP_REST_Request $rest_request - REST request object.
+	 *
 	 * @return WP_Error|string - JSON string of events.
 	 */
 	public function get_events( $rest_request ) {
@@ -283,6 +362,7 @@ class WFCM_REST_API {
 	 * REST API callback for marking events as read.
 	 *
 	 * @param WP_REST_Request $rest_request - REST request object.
+	 *
 	 * @return WP_Error|WP_REST_Response
 	 */
 	public function delete_event( $rest_request ) {
@@ -299,109 +379,174 @@ class WFCM_REST_API {
 		$is_excluded   = isset( $request_body->exclude ) ? $request_body->exclude : false;
 		$excluded_type = isset( $request_body->excludeType ) ? $request_body->excludeType : false;
 
+		$event = null;
 		if ( $is_excluded ) {
-			// Get event content type.
-			$event        = wfcm_get_event( $event_id );
-			$content_type = $event->get_content_type();
-
-			if ( 'file' === $content_type ) {
-				$excluded_setting = 'scan-exclude-files';
-
-				if ( 'dir' === $excluded_type ) {
-					$excluded_setting = 'scan-exclude-dirs';
-				}
-
-				$excluded_content = wfcm_get_setting( $excluded_setting, array() );
-
-				if ( 'dir' === $excluded_type ) {
-					$excluded_content[] = dirname( $event->get_event_title() );
-				} else {
-					$excluded_content[] = basename( $event->get_event_title() );
-				}
-
-				// Ensure no duplicated entries.
-				$excluded_content = array_unique( $excluded_content );
-				wfcm_save_setting( $excluded_setting, $excluded_content );
-			} elseif ( 'directory' === $content_type ) {
-				$excluded_content   = wfcm_get_setting( 'scan-exclude-dirs', array() );
-				$excluded_content[] = $event->get_event_title();
-
-				// Ensure no duplicated entries.
-				$excluded_content = array_unique( $excluded_content );
-				wfcm_save_setting( 'scan-exclude-dirs', $excluded_content );
-			}
+			$event = wfcm_get_event( $event_id );
+			//  update the lists of files and folders allowed in core as needed
+			$this->updateSetOfFileAndDirOptions( $event_id, 'scan-exclude-files', 'scan-exclude-dirs', $excluded_type );
 		}
 
-		// Delete the event.
+		//  delete the event in both case (with and without the exclusion)
+		$result = [
+			'success' => WFCM_REST_API::processEventDeletion( $event_id )
+		];
+
+		if ( true === $result['success'] && $is_excluded && 'dir' === $excluded_type && $event instanceof WFCM_Event_File ) {
+			//  add data necessary to show a popup about batch event deletion
+			$dirpath           = dirname( $event->get_event_title() );
+			$result['path']    = $dirpath;
+			$result['title']   = esc_html__( 'Directory excluded', 'website-file-changes-monitor' );
+			$result['message'] = sprintf(
+				                     esc_html__( 'You have excluded directory %s from the file scans.', 'website-file-changes-monitor' ),
+				                     $dirpath
+			                     ) . ' ' . esc_html__( 'Do you want to delete the existing file changes notifications about files in this directory? If you do, the process will run in the background. Please revisit the file changes results later for an updated log.', 'website-file-changes-monitor' );
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Function uses event with given event ID to update a set of plugin options representing some sort of files and
+	 * folders. It is used for example to add a folder of file to a list of exluded files or folders.
+	 *
+	 * @param int $event_id Event ID.
+	 * @param string $files_option_name Option name of the option containing a list of files.
+	 * @param string $dirs_option_name Option name of the option containing a list of files.
+	 * @param string $target_type Target type - dir or file.
+	 *
+	 * @throws Exception
+	 * @since 1.7.0
+	 */
+	private function updateSetOfFileAndDirOptions( $event_id, $files_option_name, $dirs_option_name, $target_type ) {
+		$event = wfcm_get_event( $event_id );
+		if ( false === $event ) {
+			return;
+		}
+
+		$content_type = $event->get_content_type();
+		if ( ! in_array( $content_type, [ 'file', 'directory' ] ) ) {
+			return;
+		}
+
+		$content_to_add    = null;
+		$setting_to_update = $dirs_option_name;
+		$event_title       = $event->get_event_title();
+
+		if ( 'file' === $content_type ) {
+			if ( 'file' === $target_type ) {
+				$setting_to_update = $files_option_name;
+			}
+
+			if ( 'dir' === $target_type ) {
+				$content_to_add = dirname( $event_title );
+			} else {
+				$content_to_add = basename( $event_title );
+			}
+		} elseif ( 'directory' === $content_type ) {
+			$content_to_add = $event_title;
+		}
+
+		if ( null === $content_to_add ) {
+			return;
+		}
+
+		//  get current list
+		$content_to_update = wfcm_get_setting( $setting_to_update, array() );
+		//  add a new item to the list
+		$content_to_update[] = $content_to_add;
+		//  ensure no duplicated entries
+		$content_to_update = array_unique( $content_to_update );
+		//  save back to db
+		wfcm_save_setting( $setting_to_update, $content_to_update );
+	}
+
+	/**
+	 * Deletes an event and deletes necessary counters in the db as well.
+	 *
+	 * @param int $event_id Event ID.
+	 *
+	 * @return bool True if the event was deleted. False otherwise.
+	 * @since 1.7.0
+	 */
+	public static function processEventDeletion( $event_id ) {
 		$event_type = get_post_meta( $event_id, 'event_type', true );
-		if ( wp_delete_post( $event_id, true ) ) {
+
+		$event_deleted = wp_delete_post( $event_id, true );
+		if ( $event_deleted ) {
 			if ( $event_type ) {
 				delete_transient( "wfcm_event_type_tabs_count_{$event_type}" );
 			}
-			$response = array( 'success' => true );
-		} else {
-			$response = array( 'success' => false );
+
+			return true;
 		}
 
-		$response = new WP_REST_Response( $response );
-		$response->set_status( 200 );
-
-		return $response;
+		return false;
 	}
 
 	/**
 	 * Rest endpoint to delete all of a given type (or all types) of event.
 	 *
+	 * Note: any files categorized as "unexpected WordPress core file" will be added to the list of allowed core files
+	 * before deletion.
+	 *
 	 * @method delete_events
-	 * @since  1.5.0
-	 * @param  WP_REST_Request $rest_request - REST request object.
+	 * @param WP_REST_Request $rest_request - REST request object.
+	 *
 	 * @return WP_Error|WP_REST_Response
+	 * @throws Exception
+	 * @since  1.5.0
 	 */
 	public function delete_events( $rest_request ) {
-		// Get event id from request.
+		// Get event event from request.
 		$event_type = $rest_request->get_param( 'event_type' );
 		$event_type = ( 'all' === $event_type ) ? 'all' : rtrim( $event_type, '-files' );
 
-		if ( ! $event_type || ! in_array( $event_type, array_merge( $this->get_event_types(), array( 'all' ) ), true ) ) {
+		if ( ! $event_type || ! in_array( $event_type, array_merge( WFCM_REST_API::get_event_types(), array( 'all' ) ), true ) ) {
 			return new WP_Error( 'wfcm_empty_event_type', __( 'No event type specified for the request.', 'website-file-changes-monitor' ), array( 'status' => 404 ) );
 		}
 
-		// Handle deleting the events of the passed type.
-		$event_types = ( 'all' !== $event_type ) ? array( $event_type ) : $this->get_event_types();
-		$events      = new WP_Query(
-			array(
-				'post_type'      => WFCM_Post_Types::EVENT_POST_TYPE_ID,
-				'meta_key'       => 'event_type',
-				'meta_value'     => $event_types,
-				'meta_compare'   => 'IN',
-				'posts_per_page' => -1,
-				'paged'          => false,
-				'fields'         => 'ids',
-			)
-		);
+		//  determine event types
+		$event_types = ( 'all' !== $event_type ) ? array( $event_type ) : WFCM_REST_API::get_event_types();
 
-		$ids = implode( ', ', $events->posts );
-		// Delete all of the events and assosiated metadata.
-		if ( ! empty( $ids ) ) {
-			global $wpdb;
-			$deleted_items = $wpdb->query( "DELETE a,b,c,d FROM {$wpdb->prefix}posts a LEFT JOIN {$wpdb->prefix}term_relationships b ON ( a.ID = b.object_id ) LEFT JOIN {$wpdb->prefix}postmeta c ON ( a.ID = c.post_id ) LEFT JOIN {$wpdb->prefix}term_taxonomy d ON ( d.term_taxonomy_id = b.term_taxonomy_id ) WHERE a.ID IN ( {$ids} )" );
-		}
+		//  check if there are any unexpected WordPress core files to be added to the allowed list
+		if ( in_array( 'added', $event_types ) ) {
+			$event_args = array(
+				'status'     => 'unread',
+				'nopaging'   => true,
+				'event_type' => 'added',
+				'origin'     => 'wp.org'
+			);
 
-		// if we have any deleted items then need to clear the transients.
-		if ( isset( $deleted_items ) && ! empty( $deleted_items ) ) {
-			foreach ( $event_types as $type ) {
-				delete_transient( "wfcm_event_type_tabs_count_{$type}" );
+			$unexpected_core_files = wfcm_get_events( $event_args );
+
+			//  keep a list of already allowed files for performance boost with duplicates
+			$already_allowed_files = [];
+			if ( ! empty( $unexpected_core_files ) ) {
+				/** @var WFCM_Event $unexpected_core_file */
+				foreach ( $unexpected_core_files as $unexpected_core_file ) {
+					//  update the lists of files and folders allowed in core as needed
+					$filename = basename( $unexpected_core_file->get_event_title() );
+					if ( ! in_array( $filename, $already_allowed_files ) ) {
+						$this->updateSetOfFileAndDirOptions( $unexpected_core_file->get_event_id(), 'scan-allowed-in-core-files', 'scan-allowed-in-core-dirs', 'file' );
+						array_push( $already_allowed_files, $filename );
+					}
+				}
 			}
+
 		}
+
+		//  delete events
+		$deleted_posts = WFCM_Event_Data_Store::delete_events( $event_types );
 
 		// return a successful response along with ids query was run with.
 		$response = new WP_REST_Response(
 			array(
 				'success'        => true,
-				'deleted_events' => ( ! empty( $events->posts ) ) ? $events->posts : array(),
+				'deleted_events' => $deleted_posts
 			)
 		);
 		$response->set_status( 200 );
+
 		return $response;
 	}
 
@@ -409,6 +554,7 @@ class WFCM_REST_API {
 	 * REST API callback for dismissing admin notice.
 	 *
 	 * @param WP_REST_Request $rest_request - REST request object.
+	 *
 	 * @return WP_Error|WP_REST_Response
 	 */
 	public function dismiss_admin_notice( $rest_request ) {
@@ -438,17 +584,101 @@ class WFCM_REST_API {
 	}
 
 	/**
-	 * Get a list of supported event types.
+	 * REST API callback for allowing events file or folder in the site root or WordPress core area.
 	 *
-	 * @method get_event_types
-	 * @since  1.5.0
-	 * @return array
+	 * @param WP_REST_Request $rest_request - REST request object.
+	 *
+	 * @return WP_Error|WP_REST_Response
+	 * @throws Exception
 	 */
-	private function get_event_types() {
+	public function allow_event_in_core( $rest_request ) {
+		// Get event id from request.
+		$event_id = $rest_request->get_param( 'event_id' );
+
+		if ( ! $event_id ) {
+			return new WP_Error( 'wfcm_empty_event_id', __( 'No event id specified for the request.', 'website-file-changes-monitor' ), array( 'status' => 404 ) );
+		}
+
+		// Get request body to check if event is excluded.
+		$request_body = $rest_request->get_body();
+		$request_body = json_decode( $request_body );
+		$target_type  = isset( $request_body->targetType ) ? $request_body->targetType : false;
+
+		//  update the lists of files and folders allowed in core as needed
+		$this->updateSetOfFileAndDirOptions( $event_id, 'scan-allowed-in-core-files', 'scan-allowed-in-core-dirs', $target_type );
+
+		//  read event data before deletion just in case we're processing a folder
+		$event = wfcm_get_event( $event_id );
+
+		//  delete the event after adding it to the allowed list
+		$event_deleted = WFCM_REST_API::processEventDeletion( $event_id );
+
+		$result = [
+			'success' => $event_deleted
+		];
+
+		if ( true === $result['success'] && 'dir' === $target_type && $event instanceof WFCM_Event_File ) {
+			//  add data necessary to show a popup about batch event deletion
+			$dirpath           = dirname( $event->get_event_title() );
+			$result['path']    = $dirpath;
+			$result['title']   = esc_html__( 'Directory added to allowed list', 'website-file-changes-monitor' );
+			$result['message'] = sprintf(
+				                     esc_html__( 'You have added directory %s to the list of allowed directories in the WordPress core.', 'website-file-changes-monitor' ),
+				                     $dirpath
+			                     ) . ' ' . esc_html__( 'Do you want to delete the existing file changes notifications about files in this directory? If you do, the process will run in the background. Please revisit the file changes results later for an updated log.', 'website-file-changes-monitor' );
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Rest endpoint to delete all events within a specified folder.
+	 *
+	 * @param WP_REST_Request $rest_request - REST request object.
+	 *
+	 * @return WP_Error|WP_REST_Response
+	 * @throws Exception
+	 * @since  1.7.1
+	 */
+	public function delete_events_within_folder( $rest_request ) {
+		//  check the path param presence
+		$request_data = json_decode( $rest_request->get_body(), true );
+		if ( ! array_key_exists( 'path', $request_data ) ) {
+			return new WP_Error( 'wfcm_empty_path', __( 'No directory path for the request.', 'website-file-changes-monitor' ), array( 'status' => 404 ) );
+		}
+
+		//  clean the path
+		$folder_path = stripslashes( $request_data['path'] );
+
+		//  load all relevant events
+		$events_to_delete = wfcm_get_events( [
+			'nopaging'    => true,
+			'starts_with' => $folder_path
+		] );
+
+		if ( ! empty( $events_to_delete ) ) {
+
+			//  schedule the deletion in the background
+			$deletion_process = new WFCM_Background_Event_Deletion();
+
+			$batch_offset       = 0;
+			$total_events_count = count( $events_to_delete );
+			do {
+				$batch_events = array_slice( $events_to_delete, $batch_offset, self::$batch_size );
+				$event_ids    = array_map( function ( $event ) {
+					return $event->get_event_id();
+				}, $batch_events );
+
+				$deletion_process->push_to_queue( $event_ids );
+				$batch_offset += self::$batch_size;
+			} while ( $batch_offset < $total_events_count );
+
+			$deletion_process->save();
+			$deletion_process->dispatch();
+		}
+
 		return array(
-			'added',
-			'modified',
-			'deleted',
+			'success' => true
 		);
 	}
 }

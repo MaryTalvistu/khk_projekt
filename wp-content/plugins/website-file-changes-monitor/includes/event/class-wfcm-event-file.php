@@ -23,25 +23,28 @@ class WFCM_Event_File extends WFCM_Event {
 	 */
 	public function __construct( $event_id = false ) {
 		$this->data['content_type'] = 'file'; // Content type.
+		$this->data['origin']       = ''; // File event origin
 		parent::__construct( $event_id );
 	}
 
 	/**
-	 * Set content type.
+	 * Sets the origin of file event.
 	 *
-	 * @param string $content_type - Content type.
+	 * @param string $origin File event origin.
+	 *
 	 * @return string
 	 */
-	public function set_content_type( $content_type ) {
-		return $this->set_meta( 'content_type', $content_type );
+	public function set_origin( $origin ) {
+		return $this->set_meta( 'origin', $origin );
 	}
 
 	/**
-	 * Returns content type.
+	 * Returns the origin of file event.
 	 *
-	 * @return string
+	 * @return string yes or no
 	 */
-	public function get_content_type() {
-		return $this->get_meta( 'content_type' );
+	public function get_origin() {
+		return $this->get_meta( 'origin' );
 	}
+
 }

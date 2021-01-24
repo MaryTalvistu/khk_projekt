@@ -28,6 +28,25 @@ class WFCM_Event_Query {
 	 */
 	public function __construct( $args = array() ) {
 		$this->query_vars = wp_parse_args( $args, $this->get_default_query_vars() );
+		add_filter( 'posts_where', [$this, 'alter_posts_where_clause'], 10, 2 );
+	}
+
+	/**
+	 * Changes the WHERE SQL clause to support search for posts with starting with a specific string.
+	 *
+	 * @param string $where
+	 * @param WP_Query$query
+	 *
+	 * @return string
+	 * @since 1.7.1
+	 */
+	public function alter_posts_where_clause( $where, $query ) {
+		global $wpdb;
+		$starts_with = esc_sql( $query->get( 'starts_with' ) );
+		if ( $starts_with ) {
+			$where .= " AND $wpdb->posts.post_title LIKE '$starts_with%'";
+		}
+		return $where;
 	}
 
 	/**
@@ -66,10 +85,10 @@ class WFCM_Event_Query {
 	 * Get events from WordPress.
 	 *
 	 * @return array|object
+	 * @throws Exception
 	 */
 	public function get_events() {
 		$args   = $this->get_args();
-		$events = WFCM_Data_Store::load( 'event' )->query( $args );
-		return $events;
+		return WFCM_Data_Store::load( 'event' )->query( $args );
 	}
 }

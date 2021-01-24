@@ -18,6 +18,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WFCM_Monitor {
 
 	/**
+	 * @var int Number of high level directories that are available for scanning.
+	 */
+	const SCAN_DIRS_COUNT = 5;
+
+	/**
 	 * Sensor Instance.
 	 *
 	 * @var WFCM_Monitor
@@ -62,15 +67,6 @@ class WFCM_Monitor {
 	 * @var string
 	 */
 	private static $weekly_day = '1';
-
-	/**
-	 * Frequency montly date.
-	 *
-	 * For testing change date here [01 to 31]
-	 *
-	 * @var string
-	 */
-	private static $monthly_day = '01';
 
 	/**
 	 * Schedule hook name.
@@ -144,7 +140,6 @@ class WFCM_Monitor {
 	const SCAN_HOURLY       = 'hourly';
 	const SCAN_DAILY        = 'daily';
 	const SCAN_WEEKLY       = 'weekly';
-	const SCAN_MONTHLY      = 'monthly';
 	const SCAN_FILE_LIMIT   = 200000;
 	const HASHING_ALGORITHM = 'sha256';
 
@@ -166,7 +161,7 @@ class WFCM_Monitor {
 	 * Constructor.
 	 */
 	public function __construct() {
-		$this->root_path = trailingslashit( ABSPATH );
+		$this->root_path = self::get_root_path();
 		$this->register_hooks();
 		$this->load_settings();
 		$this->schedule_file_changes_monitor();
@@ -174,6 +169,18 @@ class WFCM_Monitor {
 		// try get a max scan length from database otherwise default to 4 mins.
 		// NOTE: this code could be adjusted to allow user configuration.
 		$this->scan_max_execution_time = (int) get_option( 'wfcm_max_scan_time', 4 * MINUTE_IN_SECONDS );
+	}
+
+	/**
+	 * To be used outside of this class (apart from the constructor) to determine the absolute path to the site root.
+	 *
+	 * This class should use local variable $root_path that is set during object instantiation.
+	 *
+	 * @return string Absolute site root path.
+	 * @since 1.7.0
+	 */
+	public static function get_root_path() {
+		return trailingslashit( ABSPATH );
 	}
 
 	/**
@@ -208,11 +215,6 @@ class WFCM_Monitor {
 		if ( ! empty( $this->scan_settings['day'] ) ) {
 			self::$weekly_day = $this->scan_settings['day'];
 		}
-
-		// Set monthly date.
-		if ( ! empty( $this->scan_settings['date'] ) ) {
-			self::$monthly_day = $this->scan_settings['date'];
-		}
 	}
 
 	/**
@@ -245,11 +247,11 @@ class WFCM_Monitor {
 
 	/**
 	 * Given a frequency formulates the next time that occurs and returns a
-	 * timestamp for that time to use when scheduling initial crons.
+	 * timestamp for that time to use when scheduling initial cron jobs.
 	 *
 	 * @method get_next_cron_schedule_time
 	 * @since  1.5.0
-	 * @param  string $frequency_option an option of hourly/daily/weekly/monthly.
+	 * @param  string $frequency_option an option of hourly/daily/weekly.
 	 * @return int
 	 */
 	private function get_next_cron_schedule_time( $frequency_option ) {
@@ -273,12 +275,12 @@ class WFCM_Monitor {
 				$date = new DateTime();
 
 				// Adjust for timezone.
-				if ( ! empty( get_option( 'timezone_string' ) ) ) {
-					$timezone = new DateTimeZone( get_option( 'timezone_string' ) );
-					$date->setTimezone( $timezone );
-				} elseif ( ! empty( get_option( 'timezone_string' ) ) ) {
-					$timezone = new DateTimeZone( get_option( 'gmt_offset' ) );
-					$date->setTimezone( $timezone );
+				foreach ( ['timezone_string', 'gmt_offset'] as $timezone_option ) {
+					$tz_option_value = get_option( $timezone_option );
+					if ( ! empty( $tz_option_value ) ) {
+						$timezone = new DateTimeZone( $tz_option_value );
+						$date->setTimezone( $timezone );
+					}
 				}
 
 				$minutes = $date->format( 'i' );
@@ -317,20 +319,8 @@ class WFCM_Monitor {
 
 				$time = $next_time;
 				break;
-			case self::SCAN_MONTHLY:
-				// monthly starts on a given hour of a given day and then it
-				// uses a recurrence schedule of every 30 days.
-				$hour      = (int) wfcm_get_setting( 'scan-hour' );
-				$date      = (int) wfcm_get_setting( 'scan-date' );
-				$month     = date( 'F' ); // Month as a string.
-				$next_time = strtotime( $hour . ':00 ' . $date . ' ' . $month . ' ' . $local_timezone );
-				// if that date has passed this month add 1 month to timestamp.
-				if ( $next_time < $time ) {
-					$next_time = strtotime( '+1 month', $next_time );
-				}
-
-				$time = $next_time;
-				break;
+			default:
+				//  no other scan frequencies supported
 		}
 		return ( false === $time ) ? time() : $time;
 	}
@@ -375,10 +365,6 @@ class WFCM_Monitor {
 		$schedules['weekly']     = array(
 			'interval' => 7 * DAY_IN_SECONDS,
 			'display'  => __( 'Once a week', 'website-file-changes-monitor' ),
-		);
-		$schedules['monthly']    = array(
-			'interval' => 30 * DAY_IN_SECONDS,
-			'display'  => __( 'Once a month', 'website-file-changes-monitor' ),
 		);
 		return $schedules;
 	}
@@ -454,6 +440,7 @@ class WFCM_Monitor {
 
 		// Get directories to be scanned.
 		$directories = $this->scan_settings['directories'];
+
 		// Server directories.
 		$stored_server_dirs = wfcm_get_server_directories();
 
@@ -472,16 +459,16 @@ class WFCM_Monitor {
 
 		/**
 		 * Loop through all the parts of the scan directories one at a time
-		 * till we reach the last one ( number 6 ) - or till $break_while
+		 * till we reach the last one or till $break_while
 		 * becomes true.
 		 *
 		 * NOTE $break_while is used with the early halt setup that tries stop
 		 * a scan before it hits any timeout period.
 		 */
-		while ( false === $break_while && 6 !== $last_scanned_item ) {
+		while ( false === $break_while && ( self::SCAN_DIRS_COUNT - 1 ) !== $last_scanned_item ) {
 
-			// Set the directory/part number to scan this itteration.
-			if ( false === $last_scanned_item || $last_scanned_item > 5 ) {
+			// Set the directory/part number to scan this iteration.
+			if ( false === $last_scanned_item || $last_scanned_item > self::SCAN_DIRS_COUNT ) {
 				$next_to_scan_num = 0;
 			} elseif ( 'root' === $last_scanned_item ) {
 				$next_to_scan_num = 1;
@@ -510,6 +497,14 @@ class WFCM_Monitor {
 				// part.
 				$exclude_server_dirs = $stored_server_dirs;
 				unset( $exclude_server_dirs[ $next_to_scan_num ] );
+
+				//  exclude wp-admin and wp-include folders if we're not scanning the root folder
+				$scanning_wp_core_files = empty($path_to_scan);
+				if ( ! $scanning_wp_core_files ) {
+					$exclude_server_dirs[] = 'wp-admin';
+					$exclude_server_dirs[] = WPINC;
+				}
+
 				$this->excludes = $exclude_server_dirs;
 
 				// Try get list of files that were already scanned from DB.
@@ -570,10 +565,29 @@ class WFCM_Monitor {
 
 				// If the scan is not initial then.
 				if ( 'yes' !== $initial_scan ) {
+					//  check if we're supposed to run the checksum validation against wp.org repo
+					$run_wp_org_checksum_validation = $scanning_wp_core_files && 'yes' === $this->scan_settings['wp-repo-core-checksum-validation-enabled'];
 
-					// generates the list of added/removed/modified files and
-					// creates events for those items.
-					$this->compute_differences_and_create_change_events( $filtered_stored_files, $filtered_scanned_files );
+					if ( ! $run_wp_org_checksum_validation ) {
+						// generate regular file change events with given file lists
+						$this->compute_differences_and_create_change_events( $filtered_stored_files, $filtered_scanned_files, new WFCM_Default_Hash_Comparator(), $path_to_scan, 'local' );
+					} else {
+
+						//  get the checksums list from wp.org API (implement caching)
+						$release_files_list     = $this->get_core_files_hashes();
+						//  filter the list and convert to the correct shape
+						$release_files_to_check = $this->get_core_files_to_verify( $release_files_list, $path_to_scan );
+
+						//  generate regular file change events without the WordPress core files as this would cause
+						//  duplicates (further wp.org validation below)
+						$regular_stored_files = array_diff_key( $filtered_stored_files, $release_files_to_check);
+						$regular_scanned_files = array_diff_key( $filtered_scanned_files, $release_files_to_check);
+						$this->compute_differences_and_create_change_events( $regular_stored_files, $regular_scanned_files, new WFCM_Default_Hash_Comparator(), $path_to_scan, 'local' );
+
+						//  run an additional check of MD5 file checksums against wordpress.org repo if we're scanning
+						//  WordPress core file and this check is enabled in the plugin settings
+						$this->compute_differences_and_create_change_events( $release_files_to_check, $filtered_scanned_files, new WFCM_WordPressOrg_Hash_Comparator(), $path_to_scan, 'wp.org' );
+					}
 
 					// Check for files limit alert.
 					if ( $this->scan_limit_file ) {
@@ -608,7 +622,7 @@ class WFCM_Monitor {
 
 				// Store scanned files list.
 				wfcm_save_setting( $file_list_name, $scanned_files );
-				wfcm_save_setting( 'scanned-dirs', $scanned_dirs );
+				wfcm_save_setting( 'scanned-dirs', array_unique( $scanned_dirs ) );
 
 			}
 
@@ -624,7 +638,7 @@ class WFCM_Monitor {
 				$last_scanned_item = 'root';
 
 				do_action( 'wfcm_files_monitoring_started' );
-			} elseif ( 6 === $next_to_scan_num ) {
+			} elseif ( ( self::SCAN_DIRS_COUNT - 1 ) === $next_to_scan_num ) {
 				// save this to db as 'false' === empty ready for next run but
 				// keep the numbered version in the runtime.
 				wfcm_save_setting( 'last-scanned', false );
@@ -735,11 +749,18 @@ class WFCM_Monitor {
 	 * the posts for each event of the given types.
 	 *
 	 * @method compute_differences_and_create_change_events
-	 * @since  1.5.0
-	 * @param  array $filtered_stored_files [description]
-	 * @param  array $filtered_scanned_files [description]
+	 *
+	 * @param array $filtered_stored_files [description]
+	 * @param array $filtered_scanned_files [description]
+	 * @param WFCM_Hash_Comparator_Interface $hash_comparator Hash comparator.
+	 * @param $path_to_scan
+	 * @param string $origin Checksum origin. Could be local, wp.org or possibly another source in the future.
+	 *
+	 * @throws Exception
+	 * @since 1.7.0 Added hash comparator parameter to make hash comparison more flexible. Also added origin parameter.
+	 * @since 1.5.0
 	 */
-	private function compute_differences_and_create_change_events( $filtered_stored_files, $filtered_scanned_files ) {
+	private function compute_differences_and_create_change_events( $filtered_stored_files, $filtered_scanned_files, $hash_comparator, $path_to_scan, $origin ) {
 		// Compare the results to find out about file added and removed.
 		$files_added   = array_diff_key( $filtered_scanned_files, $filtered_stored_files );
 		$files_removed = array_diff_key( $filtered_stored_files, $filtered_scanned_files );
@@ -756,6 +777,15 @@ class WFCM_Monitor {
 		$scanned_files_minus_added  = array_diff_key( $filtered_scanned_files, $files_added );
 		$stored_files_minus_deleted = array_diff_key( $filtered_stored_files, $files_removed );
 
+		$folders_to_allow_in_core = [];
+		$files_to_allow_in_core = [];
+		$wp_core_scan_in_progress = 'wp.org' === $origin && '' === $path_to_scan;
+		if ( $wp_core_scan_in_progress ) {
+			//  we load the list of allowed files and folders here because we will use it further down
+			$files_to_allow_in_core = wfcm_get_setting('scan-allowed-in-core-files');
+			$folders_to_allow_in_core = wfcm_get_setting('scan-allowed-in-core-dirs');
+		}
+
 		// Changed files array.
 		$files_changed = array();
 
@@ -766,7 +796,7 @@ class WFCM_Monitor {
 				// If key exists, then check if the file hash is set and compare it to already stored hash.
 				if (
 					! empty( $file_hash ) && ! empty( $stored_files_minus_deleted[ $file ] )
-					&& 0 !== strcmp( $file_hash, $stored_files_minus_deleted[ $file ] )
+					&& ! $hash_comparator->compare( $file, $stored_files_minus_deleted[ $file ], $file, $file_hash )
 				) {
 					// If the file hashes don't match then store the file in changed files array.
 					$files_changed[ $file ] = $file_hash;
@@ -779,17 +809,20 @@ class WFCM_Monitor {
 			// Get excluded site content.
 			$site_content = wfcm_get_setting( WFCM_Settings::$site_content );
 
-			// Add the file count.
-			$this->scan_changes_count['files_added'] += count( $files_added );
-
 			// Log the alert.
+			$folders_to_skip = property_exists($site_content, 'skip_dirs') ? $site_content->skip_dirs : [];
 			foreach ( $files_added as $file => $file_hash ) {
 				// Get directory name.
 				$directory_name = dirname( $file );
 
 				// Check if the directory is in excluded directories list.
-				if ( ! empty( $site_content->skip_dirs ) && in_array( $directory_name, $site_content->skip_dirs, true ) ) {
-					continue; // If true, then skip the loop.
+				if ( $this->is_dir_part_of_dir_list( $directory_name, $folders_to_skip ) ) {
+					continue;
+				}
+
+				if ( $wp_core_scan_in_progress && $this->is_dir_part_of_dir_list( $directory_name, $folders_to_allow_in_core ) ) {
+					//  skip file because the folder it lives in allowed in site root or WP core and we don't want to log an added event
+					continue;
 				}
 
 				// Get filename from file path.
@@ -800,37 +833,38 @@ class WFCM_Monitor {
 					continue; // If true, then skip the loop.
 				}
 
+				if ( $wp_core_scan_in_progress && ! empty ( $files_to_allow_in_core ) && in_array( $filename, $files_to_allow_in_core, true ) ) {
+					//  skip file because it is allowed in site root or WP core and we don't want to log an added event
+					continue;
+				}
+
 				// Check for allowed extensions.
 				if ( ! empty( $site_content->skip_exts ) && in_array( pathinfo( $filename, PATHINFO_EXTENSION ), $site_content->skip_exts, true ) ) {
 					continue; // If true, then skip the loop.
 				}
 
-				// Created file event.
-				wfcm_create_event( 'added', $file, $file_hash );
-
-				// Log the added files.
-				if ( $this->scan_settings['debug-logging'] ) {
-					$msg  = wfcm_get_log_timestamp() . ' ';
-					$msg .= __( 'Added file:', 'website-file-changes-monitor' );
-					$msg .= " {$file}\n";
-					wfcm_write_to_log( $msg );
+				$created = $this->create_file_event_if_allowed('added', $file, $file_hash, $origin );
+				if ($created) {
+					$this->scan_changes_count['files_added']++;
 				}
 			}
 		}
 
 		// Files removed alert.
 		if ( in_array( 'deleted', $this->scan_settings['type'], true ) && count( $files_removed ) > 0 ) {
-			// Add the file count.
-			$this->scan_changes_count['files_deleted'] += count( $files_removed );
-
 			// Log the alert.
 			foreach ( $files_removed as $file => $file_hash ) {
 				// Get directory name.
 				$directory_name = dirname( $file );
 
 				// Check if directory is in excluded directories list.
-				if ( in_array( $directory_name, $this->scan_settings['exclude-dirs'], true ) ) {
-					continue; // If true, then skip the loop.
+				if ( $this->is_dir_part_of_dir_list( $directory_name, $this->scan_settings['exclude-dirs'] ) ) {
+					continue;
+				}
+
+				if ( $wp_core_scan_in_progress && $this->is_dir_part_of_dir_list( $directory_name, $folders_to_allow_in_core ) ) {
+					//  skip file because the folder it lives in is allowed in site root or WP core and we don't want to log a deleted event
+					continue;
 				}
 
 				// Get filename from file path.
@@ -841,41 +875,62 @@ class WFCM_Monitor {
 					continue; // If true, then skip the loop.
 				}
 
+				if ( $wp_core_scan_in_progress && ! empty ( $files_to_allow_in_core ) && in_array( $filename, $files_to_allow_in_core, true ) ) {
+					//  skip file because it is allowed in site root or WP core and we don't want to log a deleted event
+					continue;
+				}
+
 				// Check for allowed extensions.
 				if ( in_array( pathinfo( $filename, PATHINFO_EXTENSION ), $this->scan_settings['exclude-exts'], true ) ) {
 					continue; // If true, then skip the loop.
 				}
 
-				// Removed file event.
-				wfcm_create_event( 'deleted', $file, $file_hash );
-
-				// Log the removed files.
-				if ( $this->scan_settings['debug-logging'] ) {
-					$msg  = wfcm_get_log_timestamp() . ' ';
-					$msg .= __( 'Deleted file:', 'website-file-changes-monitor' );
-					$msg .= " {$file}\n";
-					wfcm_write_to_log( $msg );
+				$created = $this->create_file_event_if_allowed('deleted', $file, $file_hash, $origin );
+				if ($created) {
+					$this->scan_changes_count['files_deleted']++;
 				}
 			}
 		}
 
 		// Files edited alert.
-		if ( in_array( 'modified', $this->scan_settings['type'], true ) && count( $files_changed ) > 0 ) {
-			// Add the file count.
-			$this->scan_changes_count['files_modified'] += count( $files_changed );
-
+		if ( ! empty( $files_changed ) && in_array( 'modified', $this->scan_settings['type'], true ) ) {
 			foreach ( $files_changed as $file => $file_hash ) {
-				// Create event for each changed file.
-				wfcm_create_event( 'modified', $file, $file_hash );
-
-				// Log the modified files.
-				if ( $this->scan_settings['debug-logging'] ) {
-					$msg  = wfcm_get_log_timestamp() . ' Modified file: ' . $file;
-					$msg .= "\n";
-					wfcm_write_to_log( $msg );
+				$created = $this->create_file_event_if_allowed('modified', $file, $file_hash, $origin );
+				if ($created) {
+					$this->scan_changes_count['files_modified']++;
 				}
 			}
 		}
+	}
+
+	/**
+	 * @param string $event_type
+	 * @param string $file
+	 * @param string $file_hash
+	 * @param string $origin
+	 *
+	 * @return bool True if the event was created. False otherwise.
+	 * @throws Exception
+	 */
+	private function create_file_event_if_allowed( $event_type, $file, $file_hash, $origin ) {
+		wfcm_create_event( $event_type, $file, $file_hash, $origin );
+
+		// Log the added files.
+		if ( $this->scan_settings['debug-logging'] ) {
+			$msg = wfcm_get_log_timestamp() . ' ';
+			if ( 'added' == $event_type ) {
+				$msg .= __( 'Added file:', 'website-file-changes-monitor' );
+			} else if ( 'deleted' == $event_type ) {
+				$msg .= __( 'Deleted file:', 'website-file-changes-monitor' );
+			} else if ( 'modified' == $event_type ) {
+				$msg .= __( 'Modified file:', 'website-file-changes-monitor' );
+			}
+
+			$msg .= " {$file}\n";
+			wfcm_write_to_log( $msg );
+		}
+
+		return true;
 	}
 
 	/**
@@ -899,7 +954,7 @@ class WFCM_Monitor {
 			// note: when xDebug is watching max_execution_time from ini_get is always string "0" causing this to always fire in develop.
 			if ( $this->scan_settings['debug-logging'] ) {
 				$msg  = wfcm_get_log_timestamp() . ' ';
-				$msg .= __( 'Unable to increase max excution time, PHP safe_mode may be enabled.', 'website-file-changes-monitor' );
+				$msg .= __( 'Unable to increase max execution time, PHP safe_mode may be enabled.', 'website-file-changes-monitor' );
 				$msg .= "\n";
 				wfcm_write_to_log( $msg );
 			}
@@ -967,12 +1022,8 @@ class WFCM_Monitor {
 				$weekly_day = $this->calculate_weekly_day();
 				$scan       = ( self::$weekly_day === $weekly_day ) ? true : false;
 				break;
-			case self::SCAN_MONTHLY: // Monthly scan.
-				$str_date = $this->calculate_monthly_day();
-				if ( ! empty( $str_date ) ) {
-					$scan = ( date( 'Y-m-d' ) == $str_date ) ? true : false;
-				}
-				break;
+			default:
+				//  no other scan frequencies are supported
 		}
 		return $scan;
 	}
@@ -1076,18 +1127,6 @@ class WFCM_Monitor {
 	}
 
 	/**
-	 * Calculate and return day of the month based on WordPress timezone.
-	 *
-	 * @return string|bool - Day of the week or false.
-	 */
-	private function calculate_monthly_day() {
-		if ( in_array( $this->calculate_daily_hour(), self::$daily_hour, true ) ) {
-			return date( 'Y-m-' ) . self::$monthly_day;
-		}
-		return false;
-	}
-
-	/**
 	 * Reset file and directory counter for scan.
 	 */
 	public function reset_scan_counter() {
@@ -1144,7 +1183,7 @@ class WFCM_Monitor {
 					if ( $this->scan_settings['debug-logging'] ) {
 						// log this unusual file discovered.
 						$location = sanitize_text_field( $dir_path . '/' . (string) $item );
-						$message  = esc_html__( 'Encountered unsual filename at: ', 'website-file-changes-monitor' ) . $location;
+						$message  = esc_html__( 'Encountered unusual filename at: ', 'website-file-changes-monitor' ) . $location;
 						wfcm_write_to_log( $message );
 					}
 					// before version 1.5 we would skip over this file here
@@ -1165,19 +1204,9 @@ class WFCM_Monitor {
 			}
 
 			// Set item paths.
-			if ( ! empty( $path ) ) {
-				$relative_name = $path . '/' . $item;     // Relative file path w.r.t. the location in 7 major folders.
-				$absolute_name = $dir_path . '/' . $item; // Complete file path w.r.t. ABSPATH.
-			} else {
-				// If path is empty then it is root.
-				$relative_name = $path . $item;     // Relative file path w.r.t. the location in 7 major folders.
-				$absolute_name = $dir_path . $item; // Complete file path w.r.t. ABSPATH.
-			}
-
-			// If we're on root then ignore `wp-admin`, `wp-content` & `wp-includes`.
-			if ( empty( $path ) && ( false !== strpos( $absolute_name, 'wp-admin' ) || false !== strpos( $absolute_name, WP_CONTENT_DIR ) || false !== strpos( $absolute_name, WPINC ) ) ) {
-				continue;
-			}
+			$file_paths = $this->get_file_paths($item, $path, $dir_path);
+			$relative_name = $file_paths['rel'];
+			$absolute_name = $file_paths['abs'];
 
 			// Check for directory.
 			if ( is_dir( $absolute_name ) ) {
@@ -1192,7 +1221,7 @@ class WFCM_Monitor {
 				}
 
 				// Check if the directory is in excluded directories list.
-				if ( in_array( $absolute_name, $this->scan_settings['exclude-dirs'], true ) ) {
+				if ( $this->is_dir_part_of_dir_list( $absolute_name, $this->scan_settings['exclude-dirs'] ) ) {
 					continue; // Skip the directory.
 				}
 
@@ -1224,14 +1253,9 @@ class WFCM_Monitor {
 					continue;
 				}
 
-				// Check if the item is in excluded files list.
-				if ( in_array( $item, $this->scan_settings['exclude-files'], true ) ) {
-					continue; // If true, then skip the loop.
-				}
-
-				// Check for allowed extensions.
-				if ( in_array( pathinfo( $item, PATHINFO_EXTENSION ), $this->scan_settings['exclude-exts'], true ) ) {
-					continue; // If true, then skip the loop.
+				//  check if the file should be excluded
+				if ( $this->is_file_excluded( $item, false ) ) {
+					continue;
 				}
 
 				// Check files count.
@@ -1285,10 +1309,9 @@ class WFCM_Monitor {
 	 * function filters both stored & scanned files.
 	 *
 	 * Filters:
-	 *     1. wp-content/plugins (Plugins).
-	 *     2. wp-content/themes (Themes).
-	 *     3. wp-admin (WP Core).
-	 *     4. wp-includes (WP Core).
+	 *     1. root folder, wp-admin and wp-include (WP Core).
+	 *     2. wp-content/plugins (Plugins).
+	 *     3. wp-content/themes (Themes).
 	 *
 	 * Hooks using this function:
 	 *     1. wfcm_file_scan_stored_files.
@@ -1317,10 +1340,7 @@ class WFCM_Monitor {
 			// If the `skip_core` is set and its value is equal to true then.
 			if ( isset( $site_content->skip_core ) && true === $site_content->skip_core ) {
 				// Check the create events for wp-core file updates.
-				$this->filter_excluded_scan_files( $scan_files, $path_to_scan );
-
-				// Empty the scan files.
-				$scan_files = array();
+				$scan_files = $this->filter_excluded_scan_files( $scan_files, $path_to_scan );
 			}
 		}
 
@@ -1482,6 +1502,7 @@ class WFCM_Monitor {
 				$directory = trailingslashit( ABSPATH ) . $excluded_type;
 
 				foreach ( $scan_files as $file => $file_hash ) {
+					$files_to_exclude[] = $file;
 					$event_content[ $file ] = (object) array(
 						'file' => $file,
 						'hash' => $file_hash,
@@ -1562,7 +1583,7 @@ class WFCM_Monitor {
 	 */
 	public function reset_core_updates_flag( $last_scanned_dir ) {
 		// Check if last scanned directory exists and it is at last directory.
-		if ( ! empty( $last_scanned_dir ) && 6 === $last_scanned_dir ) {
+		if ( ! empty( $last_scanned_dir ) && ( self::SCAN_DIRS_COUNT - 1) === $last_scanned_dir ) {
 			// Get `site_content` option.
 			$site_content = wfcm_get_setting( WFCM_Settings::$site_content, false );
 
@@ -1679,7 +1700,7 @@ class WFCM_Monitor {
 			}
 		}
 
-		if ( in_array( 'modified', $this->scan_settings['type'], true ) && count( $files_changed ) > 0 ) {
+		if ( ! empty( $files_changed ) && in_array( 'modified', $this->scan_settings['type'], true ) ) {
 			wfcm_create_directory_event( 'modified', $dir_path, array_values( $files_changed ), $event_context );
 
 			// Log the modified update files.
@@ -1734,6 +1755,190 @@ class WFCM_Monitor {
 		} elseif ( 'delete' === $action ) {
 			delete_transient( 'wfcm-scan-changes-count' );
 		}
+	}
+
+	/**
+	 * Get checksums of files in WordPress core from the WordPress.org API.
+	 *
+	 * Uses WordPress transient to cache the results for a week.
+	 *
+	 * @return array
+	 *
+	 * @since 1.7.0
+	 */
+	private function get_core_files_hashes( ) {
+		$version = $GLOBALS['wp_version'];
+		$locale  = get_locale();
+
+		//  try to load checksum from transient cache
+		$cache_key = 'wfcm_wp_org_checksums_' . $version . '_' . $locale;
+		if ( false === ( $cached_checksums = get_transient( $cache_key ) ) ) {
+			$endpoint_url = add_query_arg( [
+				'version' => $version,
+				'locale'  => $locale
+			], 'https://api.wordpress.org/core/checksums/1.0/' );
+			$response     = wp_remote_get( $endpoint_url );
+			if ( is_wp_error( $response ) ) {
+				return [];
+			}
+
+			$body = json_decode( $response['body'], true );
+			if ( empty( $body['checksums'] ) || ! is_array( $body['checksums'] ) ) {
+				return [];
+			}
+
+			$checksums = $body['checksums'];
+			set_transient( $cache_key, json_encode( $body['checksums'] ), WEEK_IN_SECONDS );
+		} else {
+			//  cached value need to be decoded first
+			$checksums = json_decode( $cached_checksums, true );
+			if ( ! is_array( $checksums ) ) {
+				//  empty array is returned if the data is malformed in any way and cannot be decoded as JSON
+				return [];
+			}
+		}
+
+		return $checksums;
+	}
+
+	/**
+	 * Checks if the file should be excluded from the scan by:
+	 * - filename
+	 * - file extension
+	 * - optionally by a directory in which it resides
+	 *
+	 * @param string $item Absolute path to a file.
+	 * @param bool $check_path_for_dir_exclusion If true, the excluded directories are checked as well.
+	 *
+	 * @return bool If true, the file should be excluded.
+	 *
+	 * @since 1.7.0
+	 */
+	private function is_file_excluded($item, $check_path_for_dir_exclusion = false) {
+		// Check if the item is in excluded files list.
+		if ( in_array( $item, $this->scan_settings['exclude-files'], true ) ) {
+			return true;
+		}
+
+		if ( $check_path_for_dir_exclusion ) {
+			// Check if the directory the file is in is in excluded directories list.
+			if ( $this->is_dir_part_of_dir_list( dirname( $item ), $this->scan_settings['exclude-dirs'] ) ) {
+				return true;
+			}
+		}
+
+		// Check for allowed extensions.
+		if ( in_array( pathinfo( $item, PATHINFO_EXTENSION ), $this->scan_settings['exclude-exts'], true ) ) {
+			return true;
+		}
+
+		return false;
+	}
+
+	private function get_file_paths($item, $path, $dir_path) {
+		if ( ! empty( $path ) ) {
+			$relative_name = $path . '/' . $item;     // Relative file path w.r.t. the location in 7 major folders.
+			$absolute_name = $dir_path . '/' . $item; // Complete file path w.r.t. ABSPATH.
+		} else {
+			// If path is empty then it is root.
+			$relative_name = $path . $item;     // Relative file path w.r.t. the location in 7 major folders.
+			$absolute_name = $dir_path . $item; // Complete file path w.r.t. ABSPATH.
+		}
+
+		return [
+			'rel' => $relative_name,
+			'abs' => $absolute_name
+		];
+	}
+
+	/**
+	 * Transforms the list of core files retrieved from WordPress API into a list suitable for comparison. It also
+	 * filters out any excluded files, "core" themes and plugins and takes recent WordPress upgrade into account.
+	 *
+	 * It also managed admin notices related to a possible WordPress APi comms failure.
+	 *
+	 * @param array $release_files_list
+	 * @param string $current_path_to_scan
+	 *
+	 * @return array
+	 * @since 1.7.0
+	 */
+	private function get_core_files_to_verify( $release_files_list, $current_path_to_scan ) {
+		if ( ! empty( $release_files_list ) ) {
+
+			$release_files_to_check = [];
+
+			//  only do this if we are not supposed to skip core for some reason (most likely a recent update)
+			$site_content = wfcm_get_setting( WFCM_Settings::$site_content );
+			if ( ! isset( $site_content->skip_core ) || true !== $site_content->skip_core ) {
+				$dir_path = $this->root_path . $current_path_to_scan;
+				foreach ( $release_files_list as $relative_file_path => $hash ) {
+					//  convert relative paths to absolute paths
+					$paths              = $this->get_file_paths( $relative_file_path, $current_path_to_scan, $dir_path );
+					$absolute_file_path = $paths['abs'];
+
+					//  remove excluded files from the list
+					if ( $this->is_file_excluded( $absolute_file_path, true ) ) {
+						continue;
+					}
+
+					//  exclude any plugin and themes in the file list from wp.org repo, we don't want to
+					//  treat the preinstalled twenty* themes and akismet and hello dolly plugins as part of
+					//  WP Core
+					if ( preg_match( '/wp\-content\/(plugins|themes|)/', $absolute_file_path ) ) {
+						continue;
+					}
+
+					$release_files_to_check[ $absolute_file_path ] = $hash;
+				}
+			}
+
+			//  remove admin notice showing WP API comms failure if it still exists
+			$admin_notices = wfcm_get_setting( 'admin-notices', array() );
+			if ( isset( $admin_notices['wp-repo-core-comms-failed'] ) ) {
+				unset( $admin_notices['wp-repo-core-comms-failed'] );
+				wfcm_save_setting( 'admin-notices', $admin_notices );
+			}
+
+		} else {
+			//  create admin notice to report failed communication with WP API
+			$admin_notices = wfcm_get_setting( 'admin-notices', array() );
+			if ( ! isset( $admin_notices['wp-repo-core-comms-failed'] ) ) {
+				$admin_notices['wp-repo-core-comms-failed'] = true;
+				wfcm_save_setting( 'admin-notices', $admin_notices );
+			}
+		}
+		return $release_files_to_check;
+	}
+
+	/**
+	 * Checks if a folder is in the list of given target folders or anywhere in side them.
+	 *
+	 * @param string $directory_name Absolute path to a directory that needs to be checked.
+	 * @param string[] $target_dirs Absolute paths of directories to be searched.
+	 *
+	 * @return bool True if the dir is part of any of given target folders.
+	 * @since 1.7.1
+	 */
+	private function is_dir_part_of_dir_list( $directory_name, $target_dirs) {
+		if ( ! empty ( $target_dirs ) ) {
+			if ( in_array( $directory_name, $target_dirs, true ) ) {
+				//  directory is present in the list of target dirs
+				return true;
+			}
+
+			//  let's check if the directory is nested deeper in one of the target dirs
+			$path_to_check = $directory_name;
+			do {
+				$path_to_check = substr( $path_to_check, 0, strripos( $path_to_check, DIRECTORY_SEPARATOR ) );
+				if ( in_array( $path_to_check, $target_dirs, true ) ) {
+					//  skip file because the folder it lives in is allowed in site root or WP core and we don't want to log an added event
+					return true;
+				}
+			} while ( ! empty( $path_to_check ) );
+		}
+
+		return false;
 	}
 }
 

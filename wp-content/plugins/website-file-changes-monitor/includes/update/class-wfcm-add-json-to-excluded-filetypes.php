@@ -15,51 +15,21 @@
 class WFCM_AddJSONToExcludedFileTypes extends WFCM_AbstractUpdateWrapper implements WFCM_UpdateWrapperInterface {
 
 	/**
-	 * The key/ID of this update method.
-	 *
-	 * @var string
-	 */
-	public $key = 'add_json_to_excluded_extensions';
-
-	/**
-	 * A min version that this update may be applied to.
-	 *
-	 * @var string
-	 */
-	public $min_version = '1.4.1';
-
-	/**
-	 * A max version that this update may be applied to.
-	 *
-	 * NOTE: using 1.5.1 as a version slightly over the update this is added in
-	 * - we don't want to run this more than 1 time.
-	 *
-	 * @var string
-	 */
-	public $max_version = '1.5.1';
-
-	/**
-	 * Indicator if the run has finished.
-	 *
-	 * @var bool
-	 */
-	private $finished = false;
-
-	/**
 	 * Setup old and new version properties and register this routine if the
 	 * conditions pass checks.
 	 *
 	 * @method __construct
+	 * @param string $old_version the old version string.
+	 * @param string $new_version the new version string.
+	 *
 	 * @since  1.5.0
-	 * @param  string $old_version the old version string.
-	 * @param  string $new_version the new version string.
 	 */
 	public function __construct( $old_version, $new_version ) {
-		$this->old_version = $old_version;
-		$this->new_version = $new_version;
-		if ( $this->check() ) {
-			$this->register();
-		}
+		$this->key         = 'add_json_to_excluded_extensions';
+		$this->max_version = '1.5.1';
+		$this->min_version = '1.4.1';
+
+		parent::__construct( $old_version, $new_version );
 	}
 
 	/**
@@ -71,7 +41,6 @@ class WFCM_AddJSONToExcludedFileTypes extends WFCM_AbstractUpdateWrapper impleme
 	public function run() {
 		// track if we have made updates to the data that need saved.
 		$extensions_added    = array();
-		$file_lists_modified = array();
 		// get the current array of excluded extensions.
 		$excluded_extensions = WFCM_Settings::get_setting( 'scan-exclude-exts' );
 		if ( is_array( $excluded_extensions ) ) {
@@ -92,7 +61,7 @@ class WFCM_AddJSONToExcludedFileTypes extends WFCM_AbstractUpdateWrapper impleme
 			// remove json files from list of known files so that it does not
 			// trigger lots of 'deleted' file events for users.
 			foreach ( $this->get_file_list_numbers() as $end_fragment ) {
-				// assume not modified untill determined otherwise.
+				// assume not modified until determined otherwise.
 				$file_list_modified = false;
 				// get a file list to work with.
 				$current_file_list = WFCM_Settings::get_setting( "local-files-{$end_fragment}" );
@@ -100,7 +69,7 @@ class WFCM_AddJSONToExcludedFileTypes extends WFCM_AbstractUpdateWrapper impleme
 					// check the file against list of extensions we are adding.
 					foreach ( $extensions_added as $extension ) {
 						// if the end of the filename matches the extension...
-						if ( 0 === substr_compare( $file, $extension, -strlen( $extension ) ) ) {
+						if ( 0 === substr_compare( $file, $extension, - strlen( $extension ) ) ) {
 							// unset this file from array, flag it as modified.
 							unset( $current_file_list[ $file ] );
 							$file_list_modified = true;
@@ -122,8 +91,8 @@ class WFCM_AddJSONToExcludedFileTypes extends WFCM_AbstractUpdateWrapper impleme
 	 * Array of extensions to be added to the list of excluded extensions.
 	 *
 	 * @method get_extensions_to_add
-	 * @since  1.5.0
 	 * @return array of strings
+	 * @since  1.5.0
 	 */
 	private function get_extensions_to_add() {
 		return array( 'json' );
@@ -133,8 +102,8 @@ class WFCM_AddJSONToExcludedFileTypes extends WFCM_AbstractUpdateWrapper impleme
 	 * Get an array of the numbers used as end fragments on file list options.
 	 *
 	 * @method file_list_numbers
-	 * @since  1.5.0
 	 * @return array of ints
+	 * @since  1.5.0
 	 */
 	private function get_file_list_numbers() {
 		return array( 0, 1, 2, 3, 4, 5, 6 );

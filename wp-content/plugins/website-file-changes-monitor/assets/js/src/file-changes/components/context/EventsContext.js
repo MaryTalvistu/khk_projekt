@@ -91,10 +91,15 @@ export class EventsProvider extends Component {
 	/**
 	 * Mark event as read.
 	 *
-	 * @param {int} eventId Event id.
+	 * @param {object} event Event object.
 	 */
-	async markEventAsRead( eventId ) {
-		const response = await FileEvents.markEventAsRead( eventId );
+	async markEventAsRead( event ) {
+		let response = null;
+		if ( 'wp.org' === event.origin && 'added' === event.type ) {
+			response = await FileEvents.allowEventInCore( event.id, 'file' );
+		} else {
+			response = await FileEvents.markEventAsRead( event.id );
+		}
 
 		if ( response.success ) {
 			this.getFileEvents();
@@ -113,6 +118,25 @@ export class EventsProvider extends Component {
 		if ( response.success ) {
 			this.getFileEvents();
 		}
+
+		return response;
+
+	}
+
+	/**
+	 * Add event to the list files allowed in site root and WP core.
+	 *
+	 * @param {int} eventId Event id.
+	 * @param {string} targetType Type of target - dir or file.
+	 */
+	async allowEventInCore( eventId, targetType ) {
+		const response = await FileEvents.allowEventInCore( eventId, targetType );
+
+		if ( response.success ) {
+			await this.getFileEvents();
+		}
+
+		return response;
 	}
 
 	/**
@@ -133,7 +157,7 @@ export class EventsProvider extends Component {
 					response = await FileEvents.excludeEvent( event.id );
 				}
 
-				if ( response.success ) {
+				if ( response && response.success ) {
 					this.getFileEvents();
 				}
 			}
@@ -189,6 +213,16 @@ export class EventsProvider extends Component {
 	}
 
 	/**
+	 * Add event to exclude list.
+	 *
+	 * @param {string} dirPath Path to directory.
+	 */
+	async deleteEventsInFolder( dirPath) {
+		const response = await FileEvents.deleteEventsInFolder( dirPath );
+		return response;
+
+	}
+	/**
 	 * Component render.
 	 */
 	render() {
@@ -205,7 +239,9 @@ export class EventsProvider extends Component {
 					goToPage: this.goToPage.bind( this ),
 					handleShowItems: this.handleShowItems.bind( this ),
 					startInstantScan: this.startInstantScan.bind( this ),
-					startMarkAllRead: this.startMarkAllRead.bind( this )
+					startMarkAllRead: this.startMarkAllRead.bind( this ),
+					allowEventInCore: this.allowEventInCore.bind( this ),
+					deleteEventsInFolder: this.deleteEventsInFolder.bind( this )
 				}}
 			>
 				{this.props.children}

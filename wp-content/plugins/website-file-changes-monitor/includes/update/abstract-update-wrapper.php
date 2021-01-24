@@ -71,13 +71,21 @@ abstract class WFCM_AbstractUpdateWrapper implements WFCM_UpdateWrapperInterface
 	 *
 	 * @var bool
 	 */
-	private $finished = false;
+	protected $finished = false;
+
+	public function __construct( $old_version, $new_version ) {
+		$this->old_version = $old_version;
+		$this->new_version = $new_version;
+		if ( $this->check() ) {
+			$this->register();
+		}
+	}
 
 	/**
 	 * A boolean function to check versions against the various different
 	 * conditions for including this classes update method in the pool to run.
 	 *
-	 * NOTE: All paramiters are optional.
+	 * NOTE: All parameters are optional.
 	 *
 	 * @method check
 	 * @since  1.4.0

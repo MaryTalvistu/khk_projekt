@@ -5,7 +5,7 @@
  * Description: A hassle-free way to get alerted of file changes on your WordPress site & boost security.
  * Author: WP White Security
  * Contributors: WP White Security
- * Version: 1.6.3
+ * Version: 1.7.1
  * Text Domain: website-file-changes-monitor
  * Author URI: http://www.wpwhitesecurity.com/
  * License: GPL3
@@ -35,6 +35,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Define plugin file.
 if ( ! defined( 'WFCM_PLUGIN_FILE' ) ) {
 	define( 'WFCM_PLUGIN_FILE', __FILE__ );
+}
+
+// include the Composer autoload file
+$composer_autoloader_file = dirname( __FILE__ ) . '/vendor/autoload.php';
+if ( file_exists( $composer_autoloader_file ) ) {
+	require_once $composer_autoloader_file;
 }
 
 // Include main plugin class.

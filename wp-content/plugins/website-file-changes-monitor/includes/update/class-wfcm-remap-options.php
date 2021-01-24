@@ -9,55 +9,28 @@
  */
 
 /**
- * Remap a certain set of options defind by the plugin to change their prefix.
+ * Remap a certain set of options defined by the plugin to change their prefix.
  *
  * @since 1.4.0
  */
 class WFCM_RemapOptions extends WFCM_AbstractUpdateWrapper implements WFCM_UpdateWrapperInterface {
-
-	/**
-	 * The key/ID of this update method.
-	 *
-	 * @var string
-	 */
-	public $key = 'remap_options_prefix';
-
-	/**
-	 * A min version that this update may be applied to.
-	 *
-	 * @var string
-	 */
-	public $min_version = '1.3';
-
-	/**
-	 * A max version that this update may be applied to.
-	 *
-	 * @var string
-	 */
-	public $max_version = '2.0.0';
-
-	/**
-	 * Indicator if the run has finished.
-	 *
-	 * @var bool
-	 */
-	private $finished = false;
-
+	
 	/**
 	 * Setup old and new version properties and register this routine if the
 	 * conditions pass checks.
 	 *
 	 * @method __construct
+	 * @param string $old_version the old version string.
+	 * @param string $new_version the new version string.
+	 *
 	 * @since  1.4.0
-	 * @param  string $old_version the old version string.
-	 * @param  string $new_version the new version string.
 	 */
 	public function __construct( $old_version, $new_version ) {
-		$this->old_version = $old_version;
-		$this->new_version = $new_version;
-		if ( $this->check() ) {
-			$this->register();
-		}
+		$this->key         = 'remap_options_prefix';
+		$this->max_version = '1.7.0';
+		$this->min_version = '2.0.0';
+
+		parent::__construct( $old_version, $new_version );
 	}
 
 	/**
@@ -88,7 +61,7 @@ class WFCM_RemapOptions extends WFCM_AbstractUpdateWrapper implements WFCM_Updat
 				delete_option( $old_option->option_name );
 			}
 		}
-		// create a backup of the old settings as they were just incase we need a rollback.
+		// create a backup of the old settings as they were just in case we need a rollback.
 		if ( ! empty( $items_to_map ) ) {
 			update_option( $new_prefix . 'old_settings_before_remap', $items_to_map );
 		}
@@ -101,8 +74,8 @@ class WFCM_RemapOptions extends WFCM_AbstractUpdateWrapper implements WFCM_Updat
 	 * conflicts on users' sites.
 	 *
 	 * @method get_allowed_options_to_remap
-	 * @since  1.4.0
 	 * @return array
+	 * @since  1.4.0
 	 */
 	private function get_allowed_options_to_remap() {
 		return array(

@@ -42,20 +42,21 @@
 	.column-event-name {
 		width: 20%;
 	}
-	.column-content-type {
+
+  	.column-content-type {
 		width: 12%;
 	}
-	.column-event-datetime {
+
+  	.column-event-datetime {
 		width: 13%;
 	}
-	.column-event-action {
-		width: 85px;
-	}
-	.column-event-exclude {
-		width: 120px;
-	}
-	.column-event-content {
-		width: 25px;
+
+  	.column-event-actions {
+		width: 230px;
+
+	  .dashicons-info {
+		margin-left: 5px;
+	  }
 	}
 
 	td {
@@ -73,27 +74,18 @@
 
 		.file {
 			background: #a81cb9;
-		}
 
-		.btn-event-content {
-			background: none;
-			border: none;
-			cursor: pointer;
-			padding: 0;
-
-			&:focus {
-				outline: 0;
-			}
-
-			span {
-				font-size: 23px;
-				width: 23px;
-				height: 23px;
+			&.origin-wp-org {
+			  background: #eb3c3c;
 			}
 		}
 
-		.wfcm-exclude-btn-file {
-			margin-right: 5px;
+		.wfcm-action-button {
+		  margin-right: 5px;
+
+		  &:last-of-type {
+			margin-right: 0;
+		  }
 		}
 	}
 }
@@ -138,6 +130,19 @@
 	input[type=button]:not(:first-child) {
     	margin-left: 5px;
 	}
+
+  .action-info {
+
+	position: relative;
+
+	p {
+	  text-indent: 20px;
+	}
+
+	> svg {
+	  position: absolute;
+	}
+  }
 }
 
 .wfcm-modal-body--scrollable {
@@ -226,4 +231,59 @@ span.wfcm-update-plugins {
     background-color: #fb7b7b !important;
     text-shadow: none !important;
     border-color: #ff8484 !important;
+}
+
+.__react_component_tooltip.wide-tooltip {
+  max-width: 640px;
+}
+
+.__react_component_tooltip.actions-info-tooltip {
+
+  max-width: 640px;
+  padding: 15px;
+
+  h4 {
+	display: inline-block;
+	line-height: 100%;
+	margin: 0 0 0 8px;
+	vertical-align: super;
+  }
+
+  p {
+	color: white;
+	margin-top: 0em;
+	margin-bottom: 1.5em;
+
+	&:last-of-type {
+	  margin-bottom: 0;
+	}
+  }
+}
+
+.react-confirm-alert-overlay {
+
+  z-index: 9999;
+
+  .react-confirm-alert-body {
+	overflow-wrap: break-word;
+	word-wrap: break-word;
+
+	> h1 {
+	  font-size: 22px;
+	  line-height: 20px;
+	  user-select: none;
+	  cursor: default;
+	  padding-bottom: 15px;
+	  margin: 0;
+	  color: #666;
+	  vertical-align: middle;
+	  font-weight: 400;
+	}
+  }
+  .react-confirm-alert-button-group button {
+	font-size: 14px;
+	padding: 6px 12px;
+	text-transform: uppercase;
+  }
+
 }

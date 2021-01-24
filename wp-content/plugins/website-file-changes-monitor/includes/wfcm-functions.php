@@ -178,14 +178,15 @@ function wfcm_get_monitor() {
  * Create a new event.
  *
  * @param string $event_type - Event: added, modified, deleted.
- * @param string $file       - File.
- * @param string $file_hash  - File hash.
+ * @param string $file - File.
+ * @param string $file_hash - File hash.
+ * @param string $origin File event origin.
  */
-function wfcm_create_event( $event_type, $file, $file_hash ) {
+function wfcm_create_event( $event_type, $file, $file_hash, $origin ) {
 	// Create the content object.
 	$content = (object) array(
-		'file' => $file,
-		'hash' => $file_hash,
+			'file' => $file,
+			'hash' => $file_hash,
 	);
 
 	// Create a new event object.
@@ -193,6 +194,11 @@ function wfcm_create_event( $event_type, $file, $file_hash ) {
 	$event->set_event_title( $file );      // Set event title.
 	$event->set_event_type( $event_type ); // Set event type.
 	$event->set_content( $content );       // Set event content.
+	$event->set_origin( $origin );
+	if ( 'wp.org' === $origin ) {
+		$event_context = ( 'added' === $event_type ) ? esc_html__( 'Unexpected WordPress core file', 'website-file-changes-monitor' ) : esc_html__( 'WordPress core file', 'website-file-changes-monitor' );
+		$event->set_event_context( $event_context );
+	}
 	$event->save();                        // Save the event.
 }
 
@@ -225,7 +231,9 @@ function wfcm_create_directory_event( $event_type, $directory, $content, $event_
  * Get events.
  *
  * @param array $args - Array of query arguments.
+ *
  * @return array|object
+ * @throws Exception
  */
 function wfcm_get_events( $args ) {
 	$query = new WFCM_Event_Query( $args );
@@ -236,7 +244,9 @@ function wfcm_get_events( $args ) {
  * Get event object.
  *
  * @param int|WP_Post $event - ID or WP_Post object of an event.
+ *
  * @return WFCM_Event|bool
+ * @throws Exception
  */
 function wfcm_get_event( $event ) {
 	// Get event id.
@@ -282,7 +292,7 @@ function wfcm_get_events_for_js( $events ) {
 			}
 
 			$content_type  = $event->get_content_type();
-			$event_context = 'directory' === $content_type ? $event->get_event_context() : '';
+			$event_context = $event->get_event_context();
 
 			$event_date      = $event->event_post->post_date;
 			$date_obj        = \DateTime::createFromFormat( 'Y-m-d H:i:s', $event_date );
@@ -290,14 +300,16 @@ function wfcm_get_events_for_js( $events ) {
 			$date_str        = $date_obj ? $date_obj->format( $datetime_format ) : '';
 
 			$js_events[] = (object) array(
-				'id'           => $event->get_event_id(),
-				'path'         => dirname( $event->get_event_title() ),
-				'filename'     => basename( $event->get_event_title() ),
-				'content'      => $event->get_content(),
-				'contentType'  => ucwords( $content_type ),
-				'eventContext' => $event_context,
-				'checked'      => false,
-				'dateTime'     => $date_str,
+					'id'           => $event->get_event_id(),
+					'path'         => dirname( $event->get_event_title() ),
+					'filename'     => basename( $event->get_event_title() ),
+					'content'      => $event->get_content(),
+					'contentType'  => ucwords( $content_type ),
+					'eventContext' => $event_context,
+					'checked'      => false,
+					'dateTime'     => $date_str,
+					'origin'       => $event instanceof WFCM_Event_File ? $event->get_origin() : 'local',
+					'type'         => $event->get_event_type()
 			);
 		}
 	}
@@ -349,21 +361,16 @@ function wfcm_install() {
 				$wsal = WpSecurityAuditLog::GetInstance();
 
 				// Set excluded post types in WSAL.
-				$excluded_cpts   = $wsal->GetGlobalOption( 'custom-post-types', '' );
+				$excluded_cpts   = $wsal->GetGlobalSetting( 'custom-post-types', '' );
 				$excluded_cpts   = explode( ',', $excluded_cpts );
 				$excluded_cpts[] = 'wfcm_file_event';
-				$wsal->settings->set_excluded_post_types( $excluded_cpts );
-
-				// Disable file changes scan of WSAL.
-				$wsal->SetGlobalOption( 'scan-file-changes', 'disable' );
+				$wsal->settings()->set_excluded_post_types( $excluded_cpts );
 			}
 		}
 	}
 
-	if ( defined( 'WSAL_VERSION' ) ) {
-		if ( version_compare ( '4.1.2', WSAL_VERSION ) ) {
-			update_site_option( 'wfcm_update_wsal_notice', true );
-		}
+	if ( defined( 'WSAL_VERSION' ) && ( version_compare ( '4.1.2', WSAL_VERSION ) ) ) {
+		update_site_option( 'wfcm_update_wsal_notice', true );
 	}
 
 	update_option( WFCM_OPT_PREFIX . 'version', wfcm_instance()->version );
@@ -388,13 +395,11 @@ function wfcm_get_server_directories( $context = '' ) {
 
 	if ( 'display' === $context ) {
 		$wp_directories = array(
-			'root'           => __( 'Root directory of WordPress (except wp-admin, wp-content and wp-includes)', 'website-file-changes-monitor' ),
-			'wp-admin'       => __( 'WP Admin directory (/wp-admin/)', 'website-file-changes-monitor' ),
-			WPINC            => __( 'WP Includes directory (/wp-includes/)', 'website-file-changes-monitor' ),
-			WP_CONTENT_DIR   => __( '/wp-content/ directory (other than the plugins, themes & upload directories)', 'website-file-changes-monitor' ),
+			'root'           => __( 'WordPress core files (files in the root, WP Admin directory - /wp-admin/ and WP Includes directory - /wp-includes/)', 'website-file-changes-monitor' ),
 			get_theme_root() => __( 'Themes directory (/wp-content/themes/)', 'website-file-changes-monitor' ),
 			WP_PLUGIN_DIR    => __( 'Plugins directory (/wp-content/plugins/)', 'website-file-changes-monitor' ),
 			$uploads_dir     => __( 'Uploads directory (/wp-content/uploads/)', 'website-file-changes-monitor' ),
+			WP_CONTENT_DIR   => __( '/wp-content/ directory (other than the plugins, themes & upload directories)', 'website-file-changes-monitor' ),
 		);
 
 		if ( is_multisite() ) {
@@ -405,12 +410,10 @@ function wfcm_get_server_directories( $context = '' ) {
 		// Server directories.
 		$wp_directories = array(
 			'',               // Root directory.
-			'wp-admin',       // WordPress Admin.
-			WPINC,            // wp-includes.
-			WP_CONTENT_DIR,   // wp-content.
 			get_theme_root(), // Themes.
 			WP_PLUGIN_DIR,    // Plugins.
 			$uploads_dir,     // Uploads.
+			WP_CONTENT_DIR,   // wp-content.
 		);
 	}
 
@@ -484,8 +487,7 @@ function wfcm_get_date_format() {
 	$wp_date_format = get_option( 'date_format' );
 	$search         = array( 'F', 'M', 'n', 'j', ' ', '/', 'y', 'S', ',', 'l', 'D' );
 	$replace        = array( 'm', 'm', 'm', 'd', '-', '-', 'Y', '', '', '', '' );
-	$date_format    = str_replace( $search, $replace, $wp_date_format );
-	return $date_format;
+	return str_replace( $search, $replace, $wp_date_format );
 }
 
 /**
@@ -497,102 +499,26 @@ function wfcm_get_time_format() {
 	$wp_time_format = get_option( 'time_format' );
 	$search         = array( 'a', 'A', 'T', ' ' );
 	$replace        = array( '', '', '', '' );
-	$time_format    = str_replace( $search, $replace, $wp_time_format );
-	return $time_format;
+	return str_replace( $search, $replace, $wp_time_format );
+}
+
+/**
+ * @return bool True is current WordPress time format is an AM/PM
+ */
+function wfcm_is_time_format_am_pm() {
+	return (1 === preg_match('/[aA]$/', get_option( 'time_format' ) ) );
 }
 
 /**
  * Send file changes email.
  *
  * @param array $scan_changes_count - Array of changes count.
+ *
  * @return bool
  */
 function wfcm_send_changes_email( $scan_changes_count ) {
-	$send_mail       = false;
-	$home_url        = home_url();
-	$safe_url        = str_replace( array( 'http://', 'https://' ), '', $home_url );
-	$datetime_format = wfcm_get_datetime_format();
-	$date_time       = str_replace(
-		'$$$',
-		substr( number_format( fmod( current_time( 'timestamp' ), 1 ), 3 ), 2 ),
-		date( $datetime_format, current_time( 'timestamp' ) )
-	);
-
-	/* Translators: %s: Home URL */
-	$subject = sprintf( __( 'File changes detected on site %s during last file scan', 'website-file-changes-monitor' ), $safe_url );
-
-	/* Translators: 1. Home URL, 2. Date and time */
-	$body = '<p>' . sprintf( __( 'The Website File Changes Monitor plugin detected the following file changes on the website %1$s during the last scan on %2$s:', 'website-file-changes-monitor' ), '<a href="' . $home_url . '" target="_blank">' . $safe_url . '</a>', $date_time ) . '</p>';
-
-	$body .= '<ul>';
-	if ( $scan_changes_count['files_added'] > 0 ) {
-		/* Translators: %d: Added files count */
-		$body     .= '<li>' . sprintf( __( '%d files added', 'website-file-changes-monitor' ), $scan_changes_count['files_added'] ) . '</li>';
-		$send_mail = true;
-	}
-
-	if ( $scan_changes_count['files_deleted'] > 0 ) {
-		/* Translators: %d: Deleted files count */
-		$body     .= '<li>' . sprintf( __( '%d files deleted', 'website-file-changes-monitor' ), $scan_changes_count['files_deleted'] ) . '</li>';
-		$send_mail = true;
-	}
-
-	if ( $scan_changes_count['files_modified'] > 0 ) {
-		/* Translators: %d: Modified files count */
-		$body     .= '<li>' . sprintf( __( '%d files modified', 'website-file-changes-monitor' ), $scan_changes_count['files_modified'] ) . '</li>';
-		$send_mail = true;
-	}
-
-	if ( $scan_changes_count['plugin_installs'] > 0 || $scan_changes_count['plugin_updates'] > 0 || $scan_changes_count['plugin_uninstalls'] > 0 ) {
-		/* Translators: %d: Plugin installs/updates/deletions count */
-		$body     .= '<li>' . sprintf( __( '%d plugin installs/updates/deletions', 'website-file-changes-monitor' ), $scan_changes_count['plugin_installs'] + $scan_changes_count['plugin_updates'] + $scan_changes_count['plugin_uninstalls'] ) . '</li>';
-		$send_mail = true;
-	}
-
-	if ( $scan_changes_count['theme_installs'] > 0 || $scan_changes_count['theme_updates'] > 0 || $scan_changes_count['theme_uninstalls'] > 0 ) {
-		/* Translators: %d: Themes installs/updates/deletions count */
-		$body     .= '<li>' . sprintf( __( '%d themes installs/updates/deletions', 'website-file-changes-monitor' ), $scan_changes_count['theme_installs'] + $scan_changes_count['theme_updates'] + $scan_changes_count['theme_uninstalls'] ) . '</li>';
-		$send_mail = true;
-	}
-
-	if ( $scan_changes_count['wp_core_update'] > 0 ) {
-		/* Translators: %d: WordPress core update count */
-		$body     .= '<li>' . sprintf( __( '%d WordPress core update', 'website-file-changes-monitor' ), $scan_changes_count['wp_core_update'] ) . '</li>';
-		$send_mail = true;
-	}
-	$body .= '</ul>';
-
-	$body .= '<p>' . __( 'Visit the File Monitor in the WordPress dashboard to check the file changes.', 'website-file-changes-monitor' ) . '</p>';
-
-	/* Translators: %s: Plugin WP Hyperlink */
-	$body .= '<p>' . sprintf( __( 'This file integrity scan was done with the %s.', 'website-file-changes-monitor' ), '<a href="https://wordpress.org/plugins/website-file-changes-monitor/" target="_blank">' . __( 'Website File Changes Monitor plugin', 'website-file-changes-monitor' ) . '</a>' ) . '</p>';
-
-	if ( $send_mail ) {
-		// get the settings.
-		$email_notice_type = wfcm_get_setting( WFCM_Settings::NOTIFY_TYPE, 'admin' );
-		$email_custom_list = wfcm_get_setting( WFCM_Settings::NOTIFY_ADDRESSES, array() );
-		// convert TO an array from a string.
-		$email_custom_list = ( ! is_array( $email_custom_list ) ) ? explode( ',', $email_custom_list ) : $email_custom_list;
-
-		/*
-		 * Decide where to send email notifications. This uses a custom list of
-		 * 1 or more addresses and falls back to admin address if a custom list
-		 * is not used.
-		 */
-		if ( 'custom' === $email_notice_type && ! empty( $email_custom_list ) ) {
-			// we have a custom list to use.
-			foreach ( $email_custom_list as $email_address ) {
-				if ( filter_var( $email_address, FILTER_VALIDATE_EMAIL ) ) {
-					WFCM_Email::send( $email_address, $subject, $body );
-				}
-			}
-		} else {
-			// sending to admin address.
-			WFCM_Email::send( get_bloginfo( 'admin_email' ), $subject, $body );
-		}
-	}
-
-	return $send_mail;
+	$result_email = new WFCM_Scan_Results_Email( $scan_changes_count );
+	return $result_email->send();
 }
 
 /**
@@ -744,4 +670,89 @@ function wfcm_create_htaccess_file( $dir_path ) {
  */
 function wfcm_get_log_timestamp() {
 	return '[' . date( 'd-M-Y H:i:s' ) . ' UTC]';
+}
+
+/**
+ * Returns a list of scan frequency options.
+ *
+ * Also runs filter <code>wfcm_file_changes_scan_frequency</code>.
+ *
+ * @return array
+ * @since 1.7.0
+ */
+function wfcm_get_frequency_options() {
+	return apply_filters(
+			'wfcm_file_changes_scan_frequency',
+			array(
+					'hourly'  => __( 'Hourly', 'website-file-changes-monitor' ),
+					'daily'   => __( 'Daily', 'website-file-changes-monitor' ),
+					'weekly'  => __( 'Weekly', 'website-file-changes-monitor' )
+			)
+	);
+}
+
+/**
+ * Returns a list of options to display hour of the day in the scan frequency settings.
+ *
+ * @return array
+ * @since 1.7.0
+ */
+function wfcm_get_hours_options() {
+	return array(
+		'00' => _x( '00:00', 'a time string representing midnight', 'website-file-changes-monitor' ),
+		'01' => _x( '01:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'02' => _x( '02:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'03' => _x( '03:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'04' => _x( '04:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'05' => _x( '05:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'06' => _x( '06:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'07' => _x( '07:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'08' => _x( '08:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'09' => _x( '09:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'10' => _x( '10:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'11' => _x( '11:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'12' => _x( '12:00', 'a time string representing midday', 'website-file-changes-monitor' ),
+		'13' => _x( '13:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'14' => _x( '14:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'15' => _x( '15:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'16' => _x( '16:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'17' => _x( '17:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'18' => _x( '18:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'19' => _x( '19:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'20' => _x( '20:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'21' => _x( '21:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'22' => _x( '22:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' ),
+		'23' => _x( '23:00', 'a time string of hour followed by minutes', 'website-file-changes-monitor' )
+	);
+}
+
+/**
+ * Returns a list of options to display days of the week in the scan frequency settings.
+ *
+ * @return array
+ * @since 1.7.0
+ */
+function wfcm_get_days_options() {
+	return array(
+			'7' => _x( 'Sunday', 'the last day of the week and last day of the weekend', 'website-file-changes-monitor' ),
+			'1' => _x( 'Monday', 'the first day of the week and first day of the work week', 'website-file-changes-monitor' ),
+			'2' => _x( 'Tuesday', 'the second day of the week', 'website-file-changes-monitor' ),
+			'3' => _x( 'Wednesday', 'the third day of the week', 'website-file-changes-monitor' ),
+			'4' => _x( 'Thursday', 'the fourth day of the week', 'website-file-changes-monitor' ),
+			'5' => _x( 'Friday', 'the fith day of the week, last day of the work week', 'website-file-changes-monitor' ),
+			'6' => _x( 'Saturday', 'the first day of the weekend', 'website-file-changes-monitor' ),
+	);
+}
+
+function wfcm_convert_assoc_array_to_select_options( $options ) {
+	$result = [];
+	if ( ! empty( $options ) && is_array( $options ) ) {
+		foreach ( $options as $value => $label ) {
+			array_push( $result, [
+					'value' => $value,
+					'label' => $label
+			] );
+		}
+	}
+	return $result;
 }

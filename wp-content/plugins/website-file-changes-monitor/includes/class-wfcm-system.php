@@ -1,6 +1,6 @@
 <?php
 /**
- * WFCM Admin System.
+ * WFCM System.
  *
  * @package wfcm
  */
@@ -10,12 +10,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Admin System Class.
+ * System Class.
  *
  * This class is responsible for handling system events
  * like wp core updates.
  */
-class WFCM_Admin_System {
+class WFCM_System {
 
 	/**
 	 * Constructor.
@@ -23,6 +23,17 @@ class WFCM_Admin_System {
 	public function __construct() {
 		add_action( 'admin_init', array( $this, 'wp_core_update' ) );
 		add_action( 'automatic_updates_complete', array( $this, 'wp_core_automatic_update' ), 10, 1 );
+	}
+
+	public static function process_core_update() {
+		// Get `site_content` option.
+		$site_content = wfcm_get_setting( WFCM_Settings::$site_content, false );
+
+		// Check if the option is instance of stdClass.
+		if ( false !== $site_content ) {
+			$site_content->skip_core = true; // Set skip core to true to skip file alerts after a core update.
+			wfcm_save_setting( WFCM_Settings::$site_content, $site_content ); // Save the option.
+		}
 	}
 
 	/**
@@ -45,14 +56,7 @@ class WFCM_Admin_System {
 			$old_version = get_bloginfo( 'version' );
 
 			if ( $old_version !== $new_version ) {
-				// Get `site_content` option.
-				$site_content = wfcm_get_setting( WFCM_Settings::$site_content, false );
-
-				// Check if the option is instance of stdClass.
-				if ( false !== $site_content ) {
-					$site_content->skip_core = true; // Set skip core to true to skip file alerts after a core update.
-					wfcm_save_setting( WFCM_Settings::$site_content, $site_content ); // Save the option.
-				}
+				self::process_core_update();
 			}
 		}
 	}
@@ -68,17 +72,10 @@ class WFCM_Admin_System {
 			$old_version = get_bloginfo( 'version' );
 
 			if ( $old_version !== $obj->item->version ) {
-				// Get `site_content` option.
-				$site_content = wfcm_get_setting( WFCM_Settings::$site_content, false );
-
-				// Check if the option is instance of stdClass.
-				if ( false !== $site_content ) {
-					$site_content->skip_core = true; // Set skip core to true to skip file alerts after a core update.
-					wfcm_save_setting( WFCM_Settings::$site_content, $site_content ); // Save the option.
-				}
+				self::process_core_update();
 			}
 		}
 	}
 }
 
-new WFCM_Admin_System();
+new WFCM_System();

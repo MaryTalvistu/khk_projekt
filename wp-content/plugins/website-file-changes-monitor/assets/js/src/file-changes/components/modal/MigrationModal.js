@@ -95,8 +95,8 @@ export default class MigrationModal extends Component {
 
 		if ( response ) {
 			// this is a destructive endpoint - would POST be better option?
-			let response = await FileEvents.startManualScan();
-			if( response ) {
+			let scan_start_response = await FileEvents.startManualScan();
+			if( scan_start_response ) {
 				this.setState( () => ({
 					scanned: true,
 					step: 'completed'

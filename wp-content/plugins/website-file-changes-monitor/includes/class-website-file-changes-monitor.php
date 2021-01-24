@@ -19,7 +19,7 @@ final class Website_File_Changes_Monitor {
 	 *
 	 * @var string
 	 */
-	public $version = '1.6.3';
+	public $version = '1.7.1';
 
 	/**
 	 * Single instance of the plugin.
@@ -43,13 +43,16 @@ final class Website_File_Changes_Monitor {
 	}
 
 	/**
-	 * Contructor.
+	 * Constructor.
 	 */
 	public function __construct() {
 		$this->define_constants();
 		$this->includes();
-		$this->check_updated();
 		$this->register_hooks();
+
+		//  initialize background processes
+		new WFCM_Background_Event_Deletion();
+
 		do_action( 'website_file_changes_monitor_loaded' );
 	}
 
@@ -88,6 +91,7 @@ final class Website_File_Changes_Monitor {
 	 */
 	public function includes() {
 		require_once WFCM_BASE_DIR . 'includes/class-wfcm-autoloader.php';
+		require_once WFCM_BASE_DIR . 'includes/interface-wfcm-hash-comparator.php';
 		require_once WFCM_BASE_DIR . 'includes/wfcm-functions.php';
 		require_once WFCM_BASE_DIR . 'includes/class-wfcm-post-types.php';
 		require_once WFCM_BASE_DIR . 'includes/class-wfcm-monitor.php';
@@ -97,12 +101,22 @@ final class Website_File_Changes_Monitor {
 		require_once WFCM_BASE_DIR . 'includes/class-wfcm-data-store.php';
 		require_once WFCM_BASE_DIR . 'includes/data-stores/class-wfcm-event-data-store.php';
 
+
 		if ( is_admin() ) {
 			require_once WFCM_BASE_DIR . 'includes/admin/class-wfcm-admin.php';
 		}
 
+		// plugin, themes and core install/upgrade/delete monitoring
+		require_once WFCM_BASE_DIR . 'includes/class-wfcm-plugins.php';
+		require_once WFCM_BASE_DIR . 'includes/class-wfcm-themes.php';
+		require_once WFCM_BASE_DIR . 'includes/class-wfcm-system.php';
+		require_once WFCM_BASE_DIR . 'includes/class-wfcm-upgrader.php';
+
 		// WSAL Events
 		require_once WFCM_BASE_DIR . 'includes/wsal-events/sensor-functions.php';
+
+		//  background processes
+		require_once WFCM_BASE_DIR . 'includes/bg/class-wfcm-background-event-deletion.php';
 	}
 
 	/**
@@ -132,6 +146,7 @@ final class Website_File_Changes_Monitor {
 	 */
 	public function register_hooks() {
 		register_activation_hook( WFCM_PLUGIN_FILE, 'wfcm_install' );
+		add_action( 'init', array( $this, 'check_updated' ) );
 		add_action( 'admin_init', array( $this, 'redirect_on_activation' ) );
 		add_action( 'admin_notices', array( $this, 'update_wsal_notice' ) );
 	}

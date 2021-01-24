@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * This class monitors the theme install, uninstall, and
  * update events for file changes monitoring.
  */
-class WFCM_Admin_Themes {
+class WFCM_Themes {
 
 	/**
 	 * List of themes already installed.
@@ -28,11 +28,51 @@ class WFCM_Admin_Themes {
 	 * Constructor.
 	 */
 	public function __construct() {
-		$has_permission = ( current_user_can( 'install_themes' ) || current_user_can( 'delete_themes' ) || current_user_can( 'update_themes' ) );
+		add_action( 'admin_init', array( $this, 'on_admin_init' ) );
+	}
 
-		if ( $has_permission ) {
-			add_action( 'admin_init', array( $this, 'set_old_themes' ) );
+	/**
+	 * @param array $updated_themes
+	 */
+	public static function process_updated_theme_sites( $updated_themes ) {
+		if ( ! empty( $updated_themes ) ) {
+			foreach ( $updated_themes as $updated_theme ) {
+				wfcm_skip_theme_scan( $updated_theme, 'update' );
+			}
+		}
+	}
+
+	public function on_admin_init() {
+		if ( current_user_can( 'install_themes' ) || current_user_can( 'delete_themes' ) || current_user_can( 'update_themes' ) ) {
+			$this->set_old_themes();
 			add_action( 'shutdown', array( $this, 'monitor_theme_events' ) );
+		}
+	}
+
+	/**
+	 * @param array $themes
+	 */
+	public static function process_deleted_site_themes( $themes ) {
+		if ( empty( $themes ) ) {
+			return;
+		}
+
+		foreach ( $themes as $theme ) {
+			wfcm_skip_theme_scan( $theme->stylesheet, 'uninstall' );
+			wfcm_remove_site_theme( $theme->stylesheet );
+		}
+	}
+
+	/**
+	 * @param array $themes An array of theme slugs.
+	 */
+	public static function process_added_site_themes( $themes ) {
+		if ( empty( $themes ) ) {
+			return;
+		}
+
+		foreach ( $themes as $theme ) {
+			wfcm_add_site_theme( $theme );
 		}
 	}
 
@@ -67,20 +107,12 @@ class WFCM_Admin_Themes {
 		if ( in_array( $action, $install_actions, true ) && current_user_can( 'install_themes' ) ) {
 			// Get installed theme.
 			$themes = array_diff( wp_get_themes(), $this->old_themes );
-
-			if ( ! empty( $themes ) ) {
-				foreach ( $themes as $directory => $theme ) {
-					wfcm_add_site_theme( $directory );
-				}
-			}
+			self::process_added_site_themes( array_keys( $themes ) );
 		}
 
 		// Handle theme uninstall event.
 		if ( ( 'delete-theme' === $action && current_user_can( 'delete_themes' ) ) || ( $is_themes_page && 'delete' === $action && current_user_can( 'delete_themes' ) ) ) {
-			foreach ( $this->get_removed_themes() as $theme ) {
-				wfcm_skip_theme_scan( $theme->stylesheet, 'uninstall' );
-				wfcm_remove_site_theme( $theme->stylesheet );
-			}
+			self::process_deleted_site_themes( $this->get_removed_themes() );
 		}
 
 		// Handle theme update event.
@@ -95,11 +127,7 @@ class WFCM_Admin_Themes {
 				$updated_themes = explode( ',', sanitize_text_field( wp_unslash( $_GET['themes'] ) ) ); // phpcs:ignore
 			}
 
-			if ( ! empty( $updated_themes ) ) {
-				foreach ( $updated_themes as $updated_theme ) {
-					wfcm_skip_theme_scan( $updated_theme, 'update' );
-				}
-			}
+			self::process_updated_theme_sites( $updated_themes );
 		}
 	}
 
@@ -119,4 +147,4 @@ class WFCM_Admin_Themes {
 	}
 }
 
-new WFCM_Admin_Themes();
+new WFCM_Themes();

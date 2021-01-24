@@ -66,7 +66,8 @@ async function markEventAsRead( id ) {
  */
 async function startManualMarkAllRead( type ) {
 
-	const requestUrl = `${wfcmFileChanges.fileEvents.mark_all_read}/${type}`;
+	const sanitizedType = type.replace('-files', '');
+	const requestUrl = `${wfcmFileChanges.fileEvents.mark_all_read}/${sanitizedType}`;
 	const request    = getRestRequestObject( 'DELETE', requestUrl ); // Get REST request object.
 
 	// Send the request.
@@ -96,11 +97,51 @@ async function excludeEvent( id, excludeType ) {
 }
 
 /**
+ * Allow file or folder to be present in site root or WP core folders.
+ *
+ * @param {integer} id Event id.
+ * @param {string} targetType Type of target - dir or file.
+ */
+async function allowEventInCore( id, targetType ) {
+	const requestUrl = `${wfcmFileChanges.fileEvents.allowInCore}/${id}`;
+	const requestBody = JSON.stringify({
+		targetType: targetType
+	});
+	const request = getRestRequestObject( 'PATCH', requestUrl, requestBody );
+
+	// Send the request.
+	let response = await fetch( request );
+	response = await response.json();
+	return response;
+}
+
+
+
+/**
  * Start the manual scan.
  */
 async function startManualScan() {
 	const requestUrl = `${wfcmFileChanges.monitor.start}`;
 	const request = getRestRequestObject( 'GET', requestUrl );
+
+	// Send the request.
+	let response = await fetch( request );
+	response = await response.json();
+	return response;
+}
+
+/**
+ * Delete events within specified folder
+ *
+ * @param {string} dirPath
+ * @returns {Promise<void>}
+ */
+async function deleteEventsInFolder( dirPath ) {
+	const requestUrl = `${wfcmFileChanges.fileEvents.delete_in_folder}`;
+	const requestBody = JSON.stringify({
+		path: dirPath
+	});
+	const request = getRestRequestObject( 'DELETE', requestUrl, requestBody );
 
 	// Send the request.
 	let response = await fetch( request );
@@ -114,5 +155,7 @@ export default {
 	markEventAsRead,
 	excludeEvent,
 	startManualScan,
-	startManualMarkAllRead
+	startManualMarkAllRead,
+	allowEventInCore,
+	deleteEventsInFolder
 };

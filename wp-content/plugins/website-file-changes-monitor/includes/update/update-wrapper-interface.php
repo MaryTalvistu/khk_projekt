@@ -16,7 +16,7 @@
 interface WFCM_UpdateWrapperInterface {
 
 	/**
-	 * Pass in the old and new version strings at instansiation.
+	 * Pass in the old and new version strings at instantiation.
 	 *
 	 * @method __construct
 	 * @since  1.4.0

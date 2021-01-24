@@ -102,7 +102,6 @@ export default class MarkAllReadModal extends Component {
 	 */
 	async triggerMarkAllRead( selectedType ) {
 
-		console.log( selectedType );
 		this.setState({
 			marking: true,
 			markAllReadBtnValue: wfcmFileChanges.markAllRead.running

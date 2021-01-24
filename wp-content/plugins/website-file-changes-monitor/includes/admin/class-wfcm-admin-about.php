@@ -72,11 +72,9 @@ class WFCM_Admin_About {
 	public static function output() {
 		self::set_tabs();
 
-		$suffix = ( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) ? '' : '.min'; // Check for debug mode.
-
 		wp_enqueue_style(
 			'wfcm-settings-styles',
-			WFCM_BASE_URL . 'assets/css/dist/build.settings' . $suffix . '.css',
+			WFCM_BASE_URL . 'assets/css/dist/build.settings.css',
 			array(),
 			( defined( 'WP_DEBUG' ) && true === WP_DEBUG ) ? filemtime( WFCM_BASE_DIR . 'assets/css/dist/build.settings.css' ) : WFCM_VERSION
 		);
