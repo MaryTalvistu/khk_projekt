@@ -1,4 +1,4 @@
-# Copyright (C) 2020 TranslatePress Multilingual
+# Copyright (C) 2021 TranslatePress Multilingual
 # This file is distributed under the same license as the TranslatePress Multilingual package.
 msgid ""
 msgstr ""
@@ -681,11 +681,11 @@ msgstr ""
 msgid "Translate Page"
 msgstr ""
 
-#: includes/class-translation-manager.php:1205
+#: includes/class-translation-manager.php:1261
 msgid "Security check"
 msgstr ""
 
-#: includes/class-translation-manager.php:1279
+#: includes/class-translation-manager.php:1335
 msgid "<strong>Warning:</strong> Some strings have possibly incorrectly encoded characters. This may result in breaking the queries, rendering the page untranslated in live mode. Consider revising the following strings or their method of outputting."
 msgstr ""
 

@@ -524,14 +524,14 @@ class TRP_Translation_Manager
 
         global $trp_translated_gettext_texts;
         if (!is_admin() || $this::is_ajax_on_frontend()) {
-            global $TRP_LANGUAGE;
+            $language = get_locale();
 
             if (!$this->trp_query) {
                 $trp = TRP_Translate_Press::get_trp_instance();
                 $this->trp_query = $trp->get_component('query');
             }
 
-            $strings = $this->trp_query->get_all_gettext_strings($TRP_LANGUAGE);
+            $strings = $this->trp_query->get_all_gettext_strings($language);
             if (!empty($strings)) {
                 $trp_translated_gettext_texts = $strings;
 
@@ -601,7 +601,59 @@ class TRP_Translation_Manager
             add_filter('gettext_with_context', array($this, $prefix . 'process_gettext_strings_with_context'), 100, 4);
             add_filter('ngettext', array($this, $prefix . 'process_ngettext_strings'), 100, 5);
             add_filter('ngettext_with_context', array($this, $prefix . 'process_ngettext_strings_with_context'), 100, 6);
+
+            do_action('trp_call_gettext_filters');
         }
+    }
+
+    public function is_domain_loaded_in_locale( $domain, $locale ){
+        $localemo = $locale . '.mo';
+        $length = strlen( $localemo );
+
+        global $l10n;
+        if ( isset( $l10n[$domain] ) && is_object( $l10n[$domain] ) ) {
+            $mo_filename = $l10n[$domain]->get_filename();
+
+            // $mo_filename does not end with string $locale
+            if ( substr( strtolower( $mo_filename ), -$length ) == strtolower( $localemo ) ) {
+                return true;
+            }else{
+                return false;
+            }
+        }
+
+        // if something is not as expected, return true so that we do not interfere
+        return true;
+    }
+
+    public function verify_locale_of_loaded_textdomain(){
+        global $l10n;
+        if ( !empty( $l10n) && is_array( $l10n ) ){
+
+            $reload_domains = array();
+            $locale = get_locale();
+
+
+            foreach($l10n as $domain => $item ){
+                if ( !$this->is_domain_loaded_in_locale( $domain, $locale ) ) {
+                    $reload_domains[] = $domain;
+                }
+            }
+
+            foreach($reload_domains as $domain ){
+                if ( isset( $l10n[$domain] ) && is_object( $l10n[$domain] ) ) {
+                    $path     = $l10n[ $domain ]->get_filename();
+                    $new_path = preg_replace( '/' . $domain . '-(.*).mo$/i', $domain . '-' . $locale . '.mo', $path );
+                    if ( $new_path !== $path ) {
+                        unset( $l10n[ $domain ] );
+                        load_textdomain( $domain, $new_path );
+                    }
+                }
+            }
+        }
+
+        // do this function only once per execution. The init hook can be called more than once
+        remove_action( 'trp_call_gettext_filters', array( $this, 'verify_locale_of_loaded_textdomain' ) );
     }
 
     /**
@@ -737,6 +789,10 @@ class TRP_Translation_Manager
             $tp_gettext_is_ajax_on_frontend = $this::is_ajax_on_frontend();
 
         if (!defined('DOING_AJAX') || $tp_gettext_is_ajax_on_frontend) {
+            if ( !$this->is_domain_loaded_in_locale($domain, $current_locale) ){
+                $translation = $text;
+            }
+
             $db_id = '';
             $skip_gettext_querying = apply_filters('trp_skip_gettext_querying', false, $translation, $text, $domain);
             if (!$skip_gettext_querying) {

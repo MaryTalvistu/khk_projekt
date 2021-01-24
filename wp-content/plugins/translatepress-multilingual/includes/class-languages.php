@@ -93,6 +93,7 @@ class TRP_Languages{
 			'zh_HK' => 'zh-TW',
 			'zh_TW'	=> 'zh-TW',
 			'zh_CN'	=> 'zh-CN',
+			'nb_NO'	=> 'no'
 		) );
 		foreach ( $language_codes as $language_code ) {
 			if ( $map_google_codes && isset( $map_wp_codes_to_google[$language_code] ) ){

@@ -239,7 +239,7 @@ function trp_woo_data_strip_trpst( $data ){
 add_filter( 'trp_skip_selectors_from_dynamic_translation', 'trp_woo_skip_dynamic_translation' );
 function trp_woo_skip_dynamic_translation( $skip_selectors ){
     if( class_exists( 'WooCommerce' ) ) {
-        $add_skip_selectors = array( '#select2-billing_country-results', '#select2-shipping_country-results' );
+        $add_skip_selectors = array( '#billing_country', '#shipping_country', '#billing_state', '#shipping_state', '#select2-billing_country-results',  '#select2-billing_state-results', '#select2-shipping_country-results', '#select2-shipping_state-results' );
         return array_merge( $skip_selectors, $add_skip_selectors );
     }
     return $skip_selectors;

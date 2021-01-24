@@ -5,7 +5,7 @@ Tags: translate, translation, multilingual, automatic translation, bilingual, fr
 Requires at least: 3.1.0
 Tested up to: 5.6
 Requires PHP: 5.6.20
-Stable tag: 1.9.1
+Stable tag: 1.9.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -138,6 +138,12 @@ For more information please check out our [documentation](https://translatepress
 
 
 == Changelog ==
+= 1.9.2 =
+* Fixed Norwegian language not working with Google Automatic Translation
+* Fixed loading localization text-domain in different language than expected.
+* Fixed gettext strings in incorrect language.
+* Fixed WooCommerce country and states translations.
+
 = 1.9.1 =
 * Fixing issue with WooCommerce slugs resulting in 404 if they were changed manually from the defaults in certain cases
 * Added a new cleanup option in settings
