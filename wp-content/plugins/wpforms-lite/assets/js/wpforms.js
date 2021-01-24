@@ -1,4 +1,4 @@
-/* global wpforms_settings, grecaptcha, wpformsRecaptchaCallback, wpforms_validate, wpforms_datepicker, wpforms_timepicker, Mailcheck, Choices */
+/* global wpforms_settings, grecaptcha, hcaptcha, wpformsRecaptchaCallback, wpforms_validate, wpforms_datepicker, wpforms_timepicker, Mailcheck, Choices */
 
 'use strict';
 
@@ -215,7 +215,7 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 
 				// Validate confirmations.
 				$.validator.addMethod( 'confirm', function( value, element, param ) {
-					return $.validator.methods.equalTo.call( this, value, element, param );
+					return value === $( element ).closest( '.wpforms-field' ).find( 'input:first-child' ).val();
 				}, wpforms_settings.val_confirm );
 
 				// Validate required payments.
@@ -446,7 +446,7 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 		 *
 		 * @returns {boolean} true/false.
 		 */
-		isFieldInColumn( element ) {
+		isFieldInColumn: function( element ) {
 
 			return element.parent().hasClass( 'wpforms-one-half' ) ||
 				element.parent().hasClass( 'wpforms-two-fifths' ) ||
@@ -462,7 +462,7 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 		 *
 		 * @returns {boolean} true/false.
 		 */
-		isDateTimeField( element ) {
+		isDateTimeField: function( element ) {
 
 			return element.hasClass( 'wpforms-timepicker' ) ||
 				element.hasClass( 'wpforms-datepicker' ) ||
@@ -478,7 +478,7 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 		 *
 		 * @returns {boolean} true/false.
 		 */
-		isWrappedField( element ) {
+		isWrappedField: function( element ) { // eslint-disable-line complexity
 
 			return 'checkbox' === element.attr( 'type' ) ||
 			'radio' === element.attr( 'type' ) ||
@@ -499,7 +499,7 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 		 *
 		 * @returns {boolean} true/false.
 		 */
-		isLikertScaleField( element ) {
+		isLikertScaleField: function( element ) {
 
 			return element.hasClass( 'wpforms-likert-scale-option' );
 		},
@@ -512,9 +512,9 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 		 * @param {jQuery} element current form element.
 		 * @param {string} error Error message.
 		 */
-		dateTimeErrorPlacement( element, error ) {
+		dateTimeErrorPlacement: function( element, error ) {
 
-			var $wrapper = element.closest( '.wpforms-field-row-block' );
+			var $wrapper = element.closest( '.wpforms-field-row-block, .wpforms-field-date-time' );
 			if ( $wrapper.length ) {
 				if ( ! $wrapper.find( 'label.wpforms-error' ).length ) {
 					$wrapper.append( error );
@@ -815,8 +815,10 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 
 			$( '.wpforms-field-select-style-modern .choicesjs-select, .wpforms-field-payment-select .choicesjs-select' ).each( function( idx, el ) {
 
-				var args = window.wpforms_choicesjs_config || {};
+				var args          = window.wpforms_choicesjs_config || {},
+					searchEnabled = $( el ).data( 'search-enabled' );
 
+				args.searchEnabled  = 'undefined' !== typeof searchEnabled ? searchEnabled : true;
 				args.callbackOnInit = function() {
 
 					var self      = this,
@@ -1190,7 +1192,6 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 				page2      = page,
 				next       = page + 1,
 				prev       = page - 1,
-				formID     = $this.data( 'formid' ),
 				$form      = $this.closest( '.wpforms-form' ),
 				$page      = $form.find( '.wpforms-page-' + page ),
 				$submit    = $form.find( '.wpforms-submit-container' ),
@@ -1317,29 +1318,33 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 		},
 
 		/**
-		 * Reset/recreate reCAPTCHA v2 inside OptinMonster.
+		 * Reset/recreate hCaptcha/reCAPTCHA v2 inside OptinMonster.
 		 *
 		 * @since 1.5.0
+		 * @since 1.6.4 Added hCaptcha support.
+		 *
+		 * @param {string} optinId OptinMonster ID.
 		 */
 		optinMonsterRecaptchaReset: function( optinId ) {
 
-			var $form               = $( '#om-' + optinId ).find( '.wpforms-form' ),
-				$recaptchaContainer = $form.find( '.wpforms-recaptcha-container' ),
-				$recaptcha          = $form.find( '.g-recaptcha' ),
-				recaptchaSiteKey    = $recaptcha.attr( 'data-sitekey' ),
-				recaptchaID         = 'recaptcha-' + Date.now();
+			var $form             = $( '#om-' + optinId ).find( '.wpforms-form' ),
+				$captchaContainer = $form.find( '.wpforms-recaptcha-container' ),
+				$captcha          = $form.find( '.g-recaptcha' ),
+				captchaSiteKey    = $captcha.attr( 'data-sitekey' ),
+				captchaID         = 'recaptcha-' + Date.now(),
+				apiVar            = $captchaContainer.hasClass( 'wpforms-is-hcaptcha' ) ? hcaptcha : grecaptcha;
 
-			if ( $form.length && $recaptcha.length ) {
+			if ( $form.length && $captcha.length ) {
 
-				$recaptcha.remove();
-				$recaptchaContainer.prepend( '<div class="g-recaptcha" id="' + recaptchaID + '" data-sitekey="' + recaptchaSiteKey + '"></div>' );
+				$captcha.remove();
+				$captchaContainer.prepend( '<div class="g-recaptcha" id="' + captchaID + '" data-sitekey="' + captchaSiteKey + '"></div>' );
 
-				grecaptcha.render(
-					recaptchaID,
+				apiVar.render(
+					captchaID,
 					{
-						sitekey: recaptchaSiteKey,
+						sitekey: captchaSiteKey,
 						callback: function() {
-							wpformsRecaptchaCallback( $( '#' + recaptchaID ) );
+							wpformsRecaptchaCallback( $( '#' + captchaID ) );
 						},
 					}
 				);
@@ -1355,6 +1360,9 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 		 *
 		 * @since 1.2.3
 		 * @since 1.5.1 Added support for payment-checkbox field.
+		 *
+		 * @param {object} el jQuery DOM object.
+		 * @param {boolean} validate Whether to validate or not.
 		 */
 		amountTotal: function( el, validate ) {
 
@@ -1411,6 +1419,10 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 		 * Sanitize amount and convert to standard format for calculations.
 		 *
 		 * @since 1.2.6
+		 *
+		 * @param {string} amount Amount to sanitize.
+		 *
+		 * @returns {string} Sanitized amount.
 		 */
 		amountSanitize: function( amount ) {
 
@@ -1436,6 +1448,10 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 		 * Format amount.
 		 *
 		 * @since 1.2.6
+		 *
+		 * @param {string} amount Amount to format.
+		 *
+		 * @returns {string} Formatted amount.
 		 */
 		amountFormat: function( amount ) {
 
@@ -1467,6 +1483,8 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 		 * Get site currency settings.
 		 *
 		 * @since 1.2.6
+		 *
+		 * @returns {object} Currency settings.
 		 */
 		getCurrency: function() {
 
@@ -1501,8 +1519,16 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 		/**
 		 * Format number.
 		 *
-		 * @link http://locutus.io/php/number_format/
+		 * @see http://locutus.io/php/number_format/
+		 *
 		 * @since 1.2.6
+		 *
+		 * @param {string} number Number to format.
+		 * @param {number} decimals How many decimals?
+		 * @param {string} decimalSep Decimals separator.
+		 * @param {string} thousandsSep Thousands separator.
+		 *
+		 * @returns {string} Formatted number.
 		 */
 		numberFormat: function( number, decimals, decimalSep, thousandsSep ) {
 
@@ -1534,8 +1560,13 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 		/**
 		 * Empty check similar to PHP.
 		 *
-		 * @link http://locutus.io/php/empty/
+		 * @see http://locutus.io/php/empty/
+		 *
 		 * @since 1.2.6
+		 *
+		 * @param {mixed} mixedVar Variable to check.
+		 *
+		 * @returns {boolean} Whether the var is empty or not.
 		 */
 		empty: function( mixedVar ) {
 
@@ -1602,24 +1633,29 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 		createCookie: function( name, value, days ) {
 
 			var expires = '';
+			var secure = '';
+
+			if ( wpforms_settings.is_ssl ) {
+				secure = ';secure';
+			}
 
 			// If we have a days value, set it in the expiry of the cookie.
 			if ( days ) {
 
-				// If -1 is our value, set a session based cookie instead of a persistent cookie.
+				// If -1 is our value, set a session-based cookie instead of a persistent cookie.
 				if ( '-1' === days ) {
 					expires = '';
 				} else {
 					var date = new Date();
 					date.setTime( date.getTime() + ( days * 24 * 60 * 60 * 1000 ) );
-					expires = '; expires=' + date.toGMTString();
+					expires = ';expires=' + date.toGMTString();
 				}
 			} else {
-				expires = '; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+				expires = ';expires=Thu, 01 Jan 1970 00:00:01 GMT';
 			}
 
 			// Write the cookie.
-			document.cookie = name + '=' + value + expires + '; path=/; samesite=strict';
+			document.cookie = name + '=' + value + expires + ';path=/;samesite=strict' + secure;
 		},
 
 		/**
@@ -1666,7 +1702,7 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 		 *
 		 * @since 1.5.2
 		 *
-		 * @returns {String} Language code.
+		 * @returns {string} Language code.
 		 */
 		getFirstBrowserLanguage: function() {
 			var nav = window.navigator,
@@ -1773,9 +1809,10 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 		},
 
 		/**
-		 * Reset form recaptcha.
+		 * Reset form captcha.
 		 *
 		 * @since 1.5.3
+		 * @since 1.6.4 Added hCaptcha support.
 		 *
 		 * @param {jQuery} $form Form element.
 		 */
@@ -1785,23 +1822,25 @@ var wpforms = window.wpforms || ( function( document, window, $ ) {
 				return;
 			}
 
-			if ( typeof grecaptcha === 'undefined' ) {
+			if ( typeof hcaptcha === 'undefined' && typeof grecaptcha === 'undefined' ) {
 				return;
 			}
 
-			var recaptchaID;
+			var $captchaContainer = $form.find( '.wpforms-recaptcha-container' ),
+				apiVar            = $captchaContainer.hasClass( 'wpforms-is-hcaptcha' ) ? hcaptcha : grecaptcha,
+				recaptchaID;
 
 			// Check for invisible recaptcha first.
 			recaptchaID = $form.find( '.wpforms-submit' ).get( 0 ).recaptchaID;
 
-			// Check for v2 recaptcha if invisible recaptcha is not found.
+			// Check for hcaptcha/recaptcha v2, if invisible recaptcha is not found.
 			if ( app.empty( recaptchaID ) && recaptchaID !== 0 ) {
 				recaptchaID = $form.find( '.g-recaptcha' ).data( 'recaptcha-id' );
 			}
 
-			// Reset recaptcha.
+			// Reset captcha.
 			if ( ! app.empty( recaptchaID ) || recaptchaID === 0 ) {
-				grecaptcha.reset( recaptchaID );
+				apiVar.reset( recaptchaID );
 			}
 		},
 
