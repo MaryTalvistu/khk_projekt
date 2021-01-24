@@ -7,12 +7,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use WeglotWP\Models\Hooks_Interface_Weglot;
+use WeglotWP\Services\Button_Service_Weglot;
+use WeglotWP\Services\Request_Url_Service_Weglot;
 
 /**
  *
  * @since 2.0
  */
 class Shortcode_Weglot {
+	/**
+	 * @var Button_Service_Weglot
+	 */
+	private $button_services;
+	/**
+	 * @var Request_Url_Service_Weglot
+	 */
+	private $request_url_services;
 
 	/**
 	 * @since 2.0
@@ -31,8 +41,8 @@ class Shortcode_Weglot {
 	 * @return string
 	 */
 	public function weglot_switcher_callback() {
-		if ( ! $this->request_url_services->is_translatable_url() || ! weglot_current_url_is_eligible() ) {
-			return;
+		if ( ! $this->request_url_services->is_eligible_url() ) {
+			return '';
 		}
 
 		return $this->button_services->get_html( 'weglot-shortcode' ); //phpcs:ignore

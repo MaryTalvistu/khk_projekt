@@ -100,10 +100,14 @@ class RegexCheckerProvider
     protected function loadDefaultCheckers()
     {
         /* Add JSON LD checker */
-        $this->addChecker(new RegexChecker("#<script type=('|\")application\/ld\+json('|\")([^\>]+?)?>(.*?)<\/script>#s" , SourceType::SOURCE_JSON, 4 , array( "description" ,  "name" , "headline" , "articleSection"  )));
+        if(strpos(implode("," , $this->parser->getExcludeBlocks()), 'application/ld+json') === false  ) {
+            $this->addChecker(new RegexChecker("#<script type=('|\")application\/ld\+json('|\")([^\>]+?)?>(.*?)<\/script>#s" , SourceType::SOURCE_JSON, 4 , array( "description" ,  "name" , "headline" , "articleSection"  )));
+        }
 
         /* Add HTML template checker */
-        $this->addChecker(new RegexChecker( "#<script type=('|\")text/html('|\")([^\>]+?)?>(.+?)<\/script>#s" , SourceType::SOURCE_HTML, 4));
+        if(strpos(implode("," , $this->parser->getExcludeBlocks()), 'text/html') === false  ) {
+            $this->addChecker(new RegexChecker("#<script type=('|\")text/html('|\")([^\>]+?)?>(.+?)<\/script>#s", SourceType::SOURCE_HTML, 4));
+        }
     }
 
     /**

@@ -6,9 +6,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Exception;
 use WeglotWP\Models\Hooks_Interface_Weglot;
 use WeglotWP\Helpers\Helper_Pages_Weglot;
-use WeglotWP\Helpers\Helper_Tabs_Admin_Weglot;
+use WeglotWP\Services\Language_Service_Weglot;
+use WeglotWP\Services\Option_Service_Weglot;
+use WeglotWP\Services\User_Api_Service_Weglot;
 
 /**
  * Enqueue CSS / JS on administration
@@ -17,8 +20,21 @@ use WeglotWP\Helpers\Helper_Tabs_Admin_Weglot;
  *
  */
 class Admin_Enqueue_Weglot implements Hooks_Interface_Weglot {
+	/**
+	 * @var Language_Service_Weglot
+	 */
+	private $language_services;
+	/**
+	 * @var Option_Service_Weglot
+	 */
+	private $option_services;
+	/**
+	 * @var User_Api_Service_Weglot
+	 */
+	private $user_api_services;
 
 	/**
+	 * @throws Exception
 	 * @since 2.0
 	 */
 	public function __construct() {
@@ -35,33 +51,18 @@ class Admin_Enqueue_Weglot implements Hooks_Interface_Weglot {
 	 */
 	public function hooks() {
 		add_action( 'admin_enqueue_scripts', array( $this, 'weglot_admin_enqueue_scripts' ) );
-		add_action( 'admin_enqueue_scripts', array( $this, 'weglot_admin_enqueue_scripts_metaboxes' ) );
 		add_action( 'admin_head', array( $this, 'weglot_admin_print_head' ) );
-	}
-
-	/**
-	 * @since 2.1.0
-	 *
-	 * @return void
-	 * @param mixed $page
-	 */
-	public function weglot_admin_enqueue_scripts_metaboxes( $page ) {
-		if ( ! in_array( $page, [ 'post.php' ] ) ) { //phpcs:ignore
-			return;
-		}
-
-		wp_enqueue_script( 'weglot-admin-metaboxes-js', WEGLOT_URL_DIST . '/metaboxes-js.js', array( 'jquery' ) );
-		wp_enqueue_style( 'weglot-admin-css', WEGLOT_URL_DIST . '/css/admin-css.css', array(), WEGLOT_VERSION );
 	}
 
 
 	/**
 	 * Register CSS and JS
 	 *
-	 * @see admin_enqueue_scripts
-	 * @since 2.0
 	 * @param string $page
 	 * @return void
+	 * @throws Exception
+	 * @since 2.0
+	 * @see admin_enqueue_scripts
 	 */
 	public function weglot_admin_enqueue_scripts( $page ) {
 		if ( ! in_array( $page, array( 'toplevel_page_' . Helper_Pages_Weglot::SETTINGS ), true ) ) {
@@ -93,20 +94,10 @@ class Admin_Enqueue_Weglot implements Hooks_Interface_Weglot {
 			'weglot-admin',
 			'weglot_languages',
 			array(
-				'available' => json_decode(
-					json_encode(
-						$this->language_services->get_languages_available(
-							array(
-								'sort' => true,
-							)
-						),
-						true
-					),
-					true
-				),
+				'available' => $this->language_services->get_all_languages(),
 				'limit'     => $limit,
 				'plans'     => $this->user_api_services->get_plans(),
-				'original'  => weglot_get_original_language(),
+				'original'  => $this->language_services->get_original_language()->getInternalCode(),
 			)
 		);
 

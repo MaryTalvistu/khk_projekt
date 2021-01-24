@@ -2,9 +2,9 @@
 Contributors: remyb92, gmulti, wysija, wpr0ck
 Tags: translate, multilingual, language, translation, localization
 Requires at least: 4.5
-Tested up to: 5.6
+Tested up to: 5.5
 Requires PHP: 5.4
-Stable tag: 3.2.0
+Stable tag: 3.3.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -182,6 +182,11 @@ See changelog for upgrade changes.
 
 
 == Changelog ==
+
+= 3.3.0 (18/01/2021) =
+* Full refacto of the code
+* Add: custom language
+
 
 = 3.2.0 (15/10/2020) =
 * Add translate slug option
@@ -690,4 +695,3 @@ See changelog for upgrade changes.
 
 = 0.40 =
 * Add PDF translate, fix simple dom limit, uninstall hook, no &lt;/body&gt; case.
-

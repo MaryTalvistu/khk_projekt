@@ -17,7 +17,7 @@ class LanguageCollection extends AbstractCollection
      */
     public function addOne(AbstractCollectionEntry $entry)
     {
-        $this->collection[$entry->getIso639()] = $entry;
+        $this->collection[$entry->getInternalCode()] = $entry;
 
         return $this;
     }

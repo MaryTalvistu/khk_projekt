@@ -6,8 +6,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Weglot\Client\Api\LanguageEntry;
 use Weglot\Util\Url;
 use Weglot\Util\Server;
+use WeglotWP\Third\Amp\Amp_Service_Weglot;
 
 
 /**
@@ -19,9 +21,23 @@ class Request_Url_Service_Weglot {
 	/**
 	 * @since 2.0
 	 *
-	 * @var string
+	 * @var Url
 	 */
 	protected $weglot_url = null;
+
+	/**
+	 * @var Language_Service_Weglot
+	 */
+	private $language_services;
+
+	/**
+	 * @var Option_Service_Weglot
+	 */
+	private $option_services;
+	/**
+	 * @var Amp_Service_Weglot
+	 */
+	private $amp_services;
 
 	/**
 	 * @since 2.0
@@ -39,48 +55,34 @@ class Request_Url_Service_Weglot {
 	 * @return Url
 	 */
 	public function create_url_object( $url ) {
+
 		return new Url(
 			$url,
-			$this->option_services->get_option( 'original_language' ),
-			weglot_get_destination_languages(),
-			$this->get_home_wordpress_directory()
+			$this->language_services->get_original_language(),
+			$this->language_services->get_destination_languages( $this->is_allowed_private() ),
+			$this->get_home_wordpress_directory(),
+			$this->option_services->get_exclude_urls(),
+			$this->option_services->get_option( 'custom_urls' )
 		);
 	}
 
 	/**
+	 * @return Request_Url_Service_Weglot
 	 * @since 2.0
 	 *
-	 * @return string
 	 */
 	public function init_weglot_url() {
-		$exclude_urls_option   = $this->option_services->get_exclude_urls();
-		$original_language     = $this->option_services->get_option( 'original_language' );
-		$destinations_language = weglot_get_destination_languages();
-
-		if ( empty( $destinations_language ) ) {
-			$destinations_language[] = $original_language;
-		}
-
-		$this->weglot_url = new Url(
-			$this->get_full_url(),
-			$original_language,
-			$destinations_language,
-			$this->get_home_wordpress_directory()
-		);
-
-		$this->weglot_url->setExcludedUrls( $exclude_urls_option );
-
+		$this->weglot_url = $this->create_url_object( $this->get_full_url() );
 		return $this;
 	}
 
 	/**
 	 * Get request URL in process
 	 * @since 2.0
-	 * @param boolean $cache
-	 * @return \Weglot\Util\Url
+	 * @return Url
 	 */
-	public function get_weglot_url( $cache = true ) {
-		if ( null === $this->weglot_url || ! $cache ) {
+	public function get_weglot_url() {
+		if ( null === $this->weglot_url ) {
 			$this->init_weglot_url();
 		}
 
@@ -105,54 +107,25 @@ class Request_Url_Service_Weglot {
 
 	/**
 	 * Abstraction of \Weglot\Util\Url
+	 * @return LanguageEntry
+	 * @version 3.2.0
 	 * @since 2.0
-	 * @version 2.4.0
-	 * @param boolean $with_filter
-	 * @return string
 	 */
-	public function get_current_language( $with_filter = true ) {
-		$current_language = $this->get_weglot_url()->detectCurrentLanguage();
+	public function get_current_language() {
+		$current_language = $this->get_weglot_url()->getCurrentLanguage();
 
 		if ( ( wp_doing_ajax() || $this->is_rest() ) && isset( $_SERVER['HTTP_REFERER'] ) ) { //phpcs:ignore
-			$current_language = $this->create_url_object( $_SERVER['HTTP_REFERER'] )->detectCurrentLanguage(); //phpcs:ignore
+			$current_language = $this->create_url_object( $_SERVER['HTTP_REFERER'] )->getCurrentLanguage(); //phpcs:ignore
 		} else {
 			if ( strpos( $this->get_full_url(), 'wp-comments-post.php' ) !== false ) {
-				$current_language = $this->create_url_object( $_SERVER['HTTP_REFERER'] )->detectCurrentLanguage(); //phpcs:ignore
+				$current_language = $this->create_url_object( $_SERVER['HTTP_REFERER'] )->getCurrentLanguage(); //phpcs:ignore
 			}
 		}
 
 		if ( empty( $current_language ) ) {
-			return apply_filters( 'weglot_default_current_language_empty', 'en' );
+			return apply_filters( 'weglot_default_current_language_empty', $this->language_services->get_original_language() );
 		}
-
-		if ( $with_filter ) {
-			return apply_filters( 'weglot_translate_current_language', $current_language );
-		}
-
 		return $current_language;
-	}
-
-	/**
-	 * @since 2.4.0
-	 * @return LanguageEntry
-	 */
-	public function get_current_language_entry() {
-		return $this->language_services->get_current_language_entry_from_key( $this->get_current_language() );
-	}
-
-	/**
-	 * Abstraction of \Weglot\Util\Url
-	 * @since 2.0
-	 *
-	 * @return boolean
-	 */
-	public function is_translatable_url() {
-		$destinations = weglot_get_destination_languages();
-		if ( empty( $destinations ) ) {
-			return true;
-		}
-
-		return $this->get_weglot_url()->isTranslable() && $this->is_eligible_url( $this->get_full_url() );
 	}
 
 
@@ -164,32 +137,6 @@ class Request_Url_Service_Weglot {
 	 */
 	public function get_full_url( $use_forwarded_host = false ) {
 		return Server::fullUrl($_SERVER, $use_forwarded_host); //phpcs:ignore
-	}
-
-	/**
-	 * @since 2.0.4
-	 *
-	 * @return string
-	 * @param mixed $use_forwarded_host
-	 */
-	public function get_full_url_no_language( $use_forwarded_host = false ) {
-		return $this->create_url_object( $this->get_full_url() )->getForLanguage( weglot_get_original_language() );
-	}
-
-
-	/**
-	 * @todo : Change this when weglot-php included
-	 *
-	 * @param string $code
-	 * @return boolean
-	 */
-	public function is_language_rtl( $code ) {
-		$rtls = array( 'ar', 'he', 'fa' );
-		if ( in_array( $code, $rtls, true ) ) {
-			return true;
-		}
-
-		return false;
 	}
 
 	/**
@@ -216,66 +163,31 @@ class Request_Url_Service_Weglot {
 
 
 	/**
-	 * Is eligible URL
+	 * Returns true if the URL is translated in at least one language
 	 * @since 2.0
 	 * @param string $url
 	 * @return boolean
 	 */
-		public function is_eligible_url( $url ) {
-		$destinations = weglot_get_current_destination_languages();
-		if ( empty( $destinations ) ) {
-			return true;
+	public function is_eligible_url( $url = null ) {
+
+		if ( ! $url ) {
+			$weglot_url = $this->get_weglot_url();
+		} else {
+			$weglot_url = $this->create_url_object( $url );
 		}
 
-		$url_relative        = urldecode( $this->url_to_relative( $url ) );
-		$exclude_urls_option = $this->option_services->get_exclude_urls();
-		$custom_urls         = $this->option_services->get_option( 'custom_urls' );
-		$current_language    = $this->get_current_language();
-		$url_path_custom     = null;
-
-		if ( isset( $custom_urls[ $current_language ] ) ) {
-			foreach ( $custom_urls[ $current_language ] as $key => $value ) {
-				$url_path_custom = str_replace( '/' . $key . '/', '/' . $value . '/', $url_relative );
-			}
-		}
-
-		$weglot_url = $this->create_url_object( $url );
-		$weglot_url->setExcludedUrls( $exclude_urls_option );
-
-		if ( ! $weglot_url->isTranslable() ) {
+		if ( empty( $weglot_url->availableInLanguages() ) && $this->get_current_language() === $this->language_services->get_original_language() ) {
 			return apply_filters( 'weglot_is_eligible_url', false, $weglot_url );
 		}
-
-		if ( ! in_array( $current_language, array_merge( $destinations, array( weglot_get_original_language() ) ), true ) ) {
-			return apply_filters( 'weglot_is_eligible_url', false, $weglot_url );
-		}
-
-		if ( $url_path_custom ) {
-			$weglot_url = $this->create_url_object( $url_path_custom );
-			$weglot_url->setExcludedUrls( $exclude_urls_option );
-			if ( ! $weglot_url->isTranslable() ) {
-				return apply_filters( 'weglot_is_eligible_url', false, $weglot_url );
-			}
-		}
-
 		return apply_filters( 'weglot_is_eligible_url', true, $url );
 	}
 
 	/**
 	 * @since 2.0
-	 *
-	 * @param string $str
-	 * @return string
-	 */
-	public function escape_slash( $str ) {
-		return str_replace( '/', '\/', $str );
-	}
-
-	/**
-	 * @since 2.0
 	 * @param string $url
 	 * @return string
 	 */
+
 	public function url_to_relative( $url ) {
 		if ( ( substr( $url, 0, 7 ) === 'http://' ) || ( substr( $url, 0, 8 ) === 'https://' ) ) {
 			// the current link is an "absolute" URL - parse it to get just the path
@@ -293,6 +205,16 @@ class Request_Url_Service_Weglot {
 			return $path . $query . $fragment;
 		}
 		return $url;
+	}
+
+	public function is_allowed_private() {
+		if ( current_user_can( 'administrator' )
+			|| strpos( $this->get_full_url(), 'weglot-private=1' ) !== false
+			|| isset($_COOKIE['weglot_allow_private'])
+		) {
+			return true;
+		}
+		return false;
 	}
 }
 

@@ -5,29 +5,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 use WeglotWP\Helpers\Helper_Tabs_Admin_Weglot;
 
-$options_available = apply_filters( 'weglot_tabs_admin_options_available', [
-	'api_key_private' => [
-		'key'         => 'api_key_private',
-		'label'       => __( 'API Key', 'weglot' ),
-		'description' => sprintf( esc_html__( 'Log in to %1$sWeglot%2$s to get your API key.', 'weglot' ), '<a target="_blank" href="https://dashboard.weglot.com/register-wordpress">', '</a>' ),
-	],
-	'language_from' => [
-		'key'         => 'original_language',
-		'label'       => __( 'Original language', 'weglot' ),
-		'description' => 'What is the original (current) language of your website?',
-	],
-	'languages' => [
-		'key'         => 'destination_language',
-		'label'       => __( 'Destination languages', 'weglot' ),
-		'description' => sprintf ( esc_html__( 'Choose languages you want to translate into. Supported languages can be found %1$shere%2$s.', 'weglot' ), '<a target="_blank" href="https://weglot.com/documentation/available-languages/">', '</a>' ),
-	],
-] );
+$options_available = apply_filters(
+	'weglot_tabs_admin_options_available', [
+		'api_key_private' => [
+			'key'         => 'api_key_private',
+			'label'       => __( 'API Key', 'weglot' ),
+			'description' => sprintf( esc_html__( 'Log in to %1$sWeglot%2$s to get your API key.', 'weglot' ), '<a target="_blank" href="https://dashboard.weglot.com/register-wordpress">', '</a>' ),
+		],
+		'language_from'   => [
+			'key'         => 'original_language',
+			'label'       => __( 'Original language', 'weglot' ),
+			'description' => 'What is the original (current) language of your website?',
+		],
+		'languages'       => [
+			'key'         => 'destination_language',
+			'label'       => __( 'Destination languages', 'weglot' ),
+			'description' => sprintf( esc_html__( 'Choose languages you want to translate into. Supported languages can be found %1$shere%2$s.', 'weglot' ), '<a target="_blank" href="https://weglot.com/documentation/available-languages/">', '</a>' ),
+		],
+	]
+);
 
-$languages          = $this->language_services->get_languages_available( [
-	'sort' => true,
-] );
-$user_info          = $this->user_api_services->get_user_info();
-$plans              = $this->user_api_services->get_plans();
+$user_info = $this->user_api_services->get_user_info();
+$plans     = $this->user_api_services->get_plans();
 
 ?>
 
@@ -52,11 +51,13 @@ $plans              = $this->user_api_services->get_plans();
 					value="<?php echo esc_attr( $this->options[ $options_available['api_key_private']['key'] ] ); ?>"
 				>
 				<br>
-				<?php if ( $this->options['has_first_settings'] ) {
-	?>
-				<p class="description"><?php echo esc_html_e( 'If you don\'t have an account, you can create one in 20 seconds !', 'weglot' ); ?></p>
 				<?php
-}  ?>
+				if ( $this->options['has_first_settings'] ) {
+					?>
+				<p class="description"><?php echo esc_html_e( 'If you don\'t have an account, you can create one in 20 seconds !', 'weglot' ); ?></p>
+					<?php
+				}
+				?>
 			</td>
 		</tr>
 		<tr valign="top">
@@ -72,14 +73,21 @@ $plans              = $this->user_api_services->get_plans();
 					name="<?php echo esc_attr( sprintf( '%s[%s]', WEGLOT_SLUG, 'language_from' ) ); ?>"
 					id="<?php echo esc_attr( $options_available['language_from']['key'] ); ?>"
 				>
-					<?php foreach ( $languages as $language ) : ?>
+					<?php
+					$original_languages_possible = $this->language_services->get_languages_available( [ 'sort' => true ] );
+					foreach ( $original_languages_possible as $language ) {
+						if ( $language->getInternalCode() !== 'br' ) {
+							?>
 						<option
-							value="<?php echo esc_attr( $language->getIso639() ); ?>"
-							<?php selected( $language->getIso639(), $this->options[ $options_available['language_from']['key'] ] ); ?>
+							value="<?php echo esc_attr( $language->getInternalCode() ); ?>"
+							<?php selected( $language->getInternalCode(), $this->options[ $options_available['language_from']['key'] ] ); ?>
 						>
 							<?php esc_html_e( $language->getEnglishName(), 'weglot'); //phpcs:ignore ?>
 						</option>
-					<?php endforeach; ?>
+							<?php
+						}
+					}
+					?>
 				</select>
 			</td>
 		</tr>
@@ -100,25 +108,22 @@ $plans              = $this->user_api_services->get_plans();
 					multiple="true"
 					required
 				>
-					<?php foreach ( $this->options[ $options_available['languages']['key'] ] as $language ) :
-
-						$language = $languages[ $language ];
-						if( ! $language ) {
-							continue;
-						}
-						?>
+					<?php
+					$languages             = $this->language_services->get_all_languages();
+					$destination_languages = $this->language_services->get_destination_languages( true );
+					foreach ( $destination_languages as $language ) :
+					?>
 						<option
-							value="<?php echo esc_attr( $language->getIso639() ); ?>"
-							selected="selected"
-						>
+							value="<?php echo esc_attr( $language->getInternalCode() ); ?>"
+							selected="selected">
 							<?php echo esc_html( $language->getLocalName() ); ?>
 						</option>
 					<?php endforeach; ?>
 
 					<?php foreach ( $languages as $language ) : ?>
 						<option
-							value="<?php echo esc_attr( $language->getIso639() ); ?>"
-							<?php selected( true, in_array( $language->getIso639(), $this->options[ $options_available['languages']['key'] ], true ) ); ?>
+							value="<?php echo esc_attr( $language->getInternalCode() ); ?>"
+							<?php selected( true, in_array( $language, $destination_languages, true ) ); ?>
 						>
 							<?php echo esc_html( $language->getLocalName() ); ?>
 						</option>
@@ -144,7 +149,7 @@ $plans              = $this->user_api_services->get_plans();
 					?>
 						<p class="description">
 							<?php // translators: 1 HTML Tag, 2 HTML Tag ?>
-							<?php echo sprintf( esc_html__( 'On the Business plan, you can choose five languages. If you need more, please %1$supgrade your plan%2$s.', 'weglot' ), '<a target="_blank" href="https://dashboard.weglot.com/billing/upgrade">', '</a>' ); ?>
+							<?php echo sprintf( esc_html__( 'On the Business plan, you can choose 3 languages. If you need more, please %1$supgrade your plan%2$s.', 'weglot' ), '<a target="_blank" href="https://dashboard.weglot.com/billing/upgrade">', '</a>' ); ?>
 						</p>
 					<?php
 				}

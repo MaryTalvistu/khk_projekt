@@ -6,9 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Morphism\Morphism;
 use WeglotWP\Models\Hooks_Interface_Weglot;
-use WeglotWP\Models\Schema_Option_Migration_V3;
 
 /**
  * Migration Weglot
@@ -18,11 +16,12 @@ use WeglotWP\Models\Schema_Option_Migration_V3;
 class Migration_Weglot implements Hooks_Interface_Weglot {
 
 
+
 	/**
 	 * @since 2.0.0
 	 */
 	public function __construct() {
-		$this->migration_services = weglot_get_service( 'Migration_Service_Weglot' );
+
 	}
 
 

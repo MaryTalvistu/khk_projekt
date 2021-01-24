@@ -11,12 +11,18 @@ use Weglot\Client\Api\Shared\AbstractCollectionEntry;
 class LanguageEntry extends AbstractCollectionEntry
 {
     /**
-     * ISO 639-1 code to identify language
+     * Internal weglot code to identify language, is 2 letters, eg tw
      *
-     * @see https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
      * @var string
      */
-    protected $iso_639_1;
+    protected $internalCode;
+
+    /**
+     * External code that shows on website on URLs (can be more than 2 letters)
+     *
+     * @var string
+     */
+    protected $externalCode;
 
     /**
      * English name of the language
@@ -41,27 +47,29 @@ class LanguageEntry extends AbstractCollectionEntry
 
     /**
      * LanguageEntry constructor.
-     * @param string $iso_639_1     ISO 639-1 code to identify language
+     * @param string $internalCode    Internal weglot code to identify language
+     * @param string $externalCode     External code that shows on website on URLs
      * @param string $englishName   English name of the language
      * @param string $localName     Name of the language in the language
      * @param bool $isRtl           Language is right to left
      */
-    public function __construct($iso_639_1, $englishName, $localName, $isRtl = false)
+    public function __construct($internalCode, $externalCode, $englishName, $localName, $isRtl = false)
     {
         $this
-            ->setIso639($iso_639_1)
+            ->setInternalCode($internalCode)
+            ->setExternalCode($externalCode)
             ->setEnglishName($englishName)
             ->setLocalName($localName)
             ->setRtl($isRtl);
     }
 
     /**
-     * @param $iso_639_1
+     * @param $internalCode
      * @return $this
      */
-    public function setIso639($iso_639_1)
+    public function setInternalCode($internalCode)
     {
-        $this->iso_639_1 = $iso_639_1;
+        $this->internalCode = $internalCode;
 
         return $this;
     }
@@ -69,9 +77,28 @@ class LanguageEntry extends AbstractCollectionEntry
     /**
      * @return string
      */
-    public function getIso639()
+    public function getInternalCode()
     {
-        return $this->iso_639_1;
+        return $this->internalCode;
+    }
+
+    /**
+     * @param $externalCode
+     * @return $this
+     */
+    public function setExternalCode($externalCode)
+    {
+        $this->externalCode = isset($externalCode) ? $externalCode : $this->internalCode;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getExternalCode()
+    {
+        return $this->externalCode;
     }
 
     /**
@@ -137,7 +164,8 @@ class LanguageEntry extends AbstractCollectionEntry
     public function jsonSerialize()
     {
         return [
-            'code'      => $this->getIso639(),
+            'internal_code'      => $this->getInternalCode(),
+            'external_code'      => $this->getExternalCode(),
             'english'   => $this->getEnglishName(),
             'local'     => $this->getLocalName(),
             'rtl'       => $this->isRtl(),

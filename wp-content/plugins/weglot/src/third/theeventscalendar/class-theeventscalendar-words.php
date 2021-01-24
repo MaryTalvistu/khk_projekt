@@ -18,6 +18,11 @@ use WeglotWP\Models\Hooks_Interface_Weglot;
 class Theeventscalendar_Words implements Hooks_Interface_Weglot {
 
 	/**
+	 * @var Theeventscalendar_Active
+	 */
+	private $theeventcalendar_active_services;
+
+	/**
 	 * @since 3.1.2
 	 * @return void
 	 */
@@ -41,8 +46,8 @@ class Theeventscalendar_Words implements Hooks_Interface_Weglot {
 
 
 	/**
+	 * @return array
 	 * @since 3.1.2
-	 * @return void
 	 */
 	public function weglot_theeventscalendar_words( $words ) {
 

@@ -16,7 +16,10 @@ use WeglotWP\Models\Hooks_Interface_Weglot;
  * @since 2.4.0
  */
 class WC_Cart_Reload_Weglot implements Hooks_Interface_Weglot {
-	protected $name_transient = 'weglot_wc_clean_cart';
+	/**
+	 * @var Wc_Active
+	 */
+	private $wc_active_services;
 
 	/**
 	 * @since 2.4.0

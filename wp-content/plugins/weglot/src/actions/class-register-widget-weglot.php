@@ -20,14 +20,14 @@ class Register_Widget_Weglot implements Hooks_Interface_Weglot {
 	 * @return void
 	 */
 	public function hooks() {
-		add_action( 'widgets_init', array( $this, 'register_widget_weglot' ) );
+		add_action( 'widgets_init', array( $this, 'register_a_widget_weglot' ) );
 	}
 
 	/**
 	 * @since 2.0
 	 * @return void
 	 */
-	public function register_widget_weglot() {
+	public function register_a_widget_weglot() {
 		register_widget( 'WeglotWP\Widgets\Widget_Selector_Weglot' );
 	}
 }

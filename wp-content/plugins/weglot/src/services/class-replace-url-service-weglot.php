@@ -17,6 +17,14 @@ use WeglotWP\Helpers\Helper_Replace_Url_Weglot;
  * @since 2.0
  */
 class Replace_Url_Service_Weglot {
+	/**
+	 * @var Request_Url_Service_Weglot
+	 */
+	private $request_url_services;
+	/**
+	 * @var Replace_Link_Service_Weglot
+	 */
+	private $replace_link_service;
 
 	/**
 	 * @since 2.0
@@ -39,16 +47,15 @@ class Replace_Url_Service_Weglot {
 			$dom = $this->modify_link( $value, $dom, $key );
 		}
 
-		$current_language = weglot_get_current_language();
-		$language_code_rewrited = array_search( $current_language, apply_filters( 'weglot_language_code_replace', array() ) );
+		$current_language = $this->request_url_services->get_current_language();
 
-		if ( ! empty( $language_code_rewrited ) ) {
-			$dom = preg_replace( '/<html (.*?)?lang=(\"|\')(\S*)(\"|\')/', '<html $1lang=$2' . $current_language . '$4 weglot-lang=$2' . $language_code_rewrited . '$4', $dom );
+		if ( $current_language->getExternalCode() !== $current_language->getInternalCode() ) {
+			$dom = preg_replace( '/<html (.*?)?lang=(\"|\')(\S*)(\"|\')/', '<html $1lang=$2' . $current_language->getExternalCode() . '$4 weglot-lang=$2' . $current_language->getInternalCode() . '$4', $dom );
 		} else {
-			$dom = preg_replace( '/<html (.*?)?lang=(\"|\')(\S*)(\"|\')/', '<html $1lang=$2' . $current_language . '$4', $dom );
+			$dom = preg_replace( '/<html (.*?)?lang=(\"|\')(\S*)(\"|\')/', '<html $1lang=$2' . $current_language->getExternalCode() . '$4', $dom );
 		}
 
-		$dom = preg_replace( '/property="og:locale" content=(\"|\')(\S*)(\"|\')/', 'property="og:locale" content=$1' . $current_language . '$3', $dom );
+		$dom = preg_replace( '/property="og:locale" content=(\"|\')(\S*)(\"|\')/', 'property="og:locale" content=$1' . $current_language->getExternalCode() . '$3', $dom );
 
 		return apply_filters( 'weglot_replace_link', $dom );
 	}
@@ -60,11 +67,11 @@ class Replace_Url_Service_Weglot {
 			if ( is_array( $val ) ) {
 				$json[ $key ] = $this->replace_link_in_json( $val );
 			} else {
-				if ( Parser::getSourceType( $val ) == SourceType::SOURCE_HTML ) {
+				if ( Parser::getSourceType( $val ) === SourceType::SOURCE_HTML ) {
 					$json[ $key ] = $this->replace_link_in_dom( $val );
 				} else {
 					if ( in_array( $key, $replace_urls, true ) && $this->check_link( $val ) ) {
-						$json[ $key ] = $this->replace_link_service->replace_url( $val );
+						$json[ $key ] = $this->replace_link_service->replace_url( $val , $this->request_url_services->get_current_language());
 					}
 				}
 			}
@@ -82,15 +89,14 @@ class Replace_Url_Service_Weglot {
 	 * @return string
 	 */
 	public function modify_link( $pattern, $translated_page, $type ) {
-		$current_language = weglot_get_current_language();
 		preg_match_all( $pattern, $translated_page, $out, PREG_PATTERN_ORDER );
 		$count_out_0 = count( $out[0] );
 		for ( $i = 0;$i < $count_out_0; $i++ ) {
-			$sometags = ( isset( $out[1] ) ) ? $out[1][ $i ] : null;
-			$quote1 = ( isset( $out[2] ) ) ? $out[2][ $i ] : null;
+			$sometags    = ( isset( $out[1] ) ) ? $out[1][ $i ] : null;
+			$quote1      = ( isset( $out[2] ) ) ? $out[2][ $i ] : null;
 			$current_url = ( isset( $out[3] ) ) ? $out[3][ $i ] : null;
-			$quote2 = ( isset( $out[4] ) ) ? $out[4][ $i ] : null;
-			$sometags2 = ( isset( $out[5] ) ) ? $out[5][ $i ] : null;
+			$quote2      = ( isset( $out[4] ) ) ? $out[4][ $i ] : null;
+			$sometags2   = ( isset( $out[5] ) ) ? $out[5][ $i ] : null;
 
 			$length_link = apply_filters( 'weglot_length_replace_a', 1500 ); // Prevent error on long URL (preg_match_all Compilation failed: regular expression is too large at offset)
 			if ( strlen( $current_url ) >= $length_link ) {
@@ -130,8 +136,8 @@ class Replace_Url_Service_Weglot {
 	 * @return string
 	 */
 	public function check_link( $current_url, $sometags = null, $sometags2 = null ) {
-		$admin_url = admin_url();
-		$parsed_url = wp_parse_url( $current_url );
+		$admin_url   = admin_url();
+		$parsed_url  = wp_parse_url( $current_url );
 		$server_host = apply_filters( 'weglot_check_link_server_host', $_SERVER['HTTP_HOST'] ); //phpcs:ignore
 
 		return (
@@ -189,7 +195,7 @@ class Replace_Url_Service_Weglot {
 	 * @return boolean
 	 */
 	public function ends_with( $haystack, $needle ) {
-		$temp = strlen( $haystack );
+		$temp       = strlen( $haystack );
 		$len_needle = strlen( $needle );
 
 		return '' === $needle ||

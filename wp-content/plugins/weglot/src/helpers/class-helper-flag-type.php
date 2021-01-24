@@ -34,19 +34,6 @@ class Helper_Flag_Type {
 
 	/**
 	 * @since 3.0.0
-	 * @return array
-	 */
-	public static function get_flags_type() {
-		return [
-			RECTANGLE_MAT,
-			SHINY,
-			SQUARE,
-			CIRCLE,
-		];
-	}
-
-	/**
-	 * @since 3.0.0
 	 * @param string|int $number
 	 * @return string
 	 */

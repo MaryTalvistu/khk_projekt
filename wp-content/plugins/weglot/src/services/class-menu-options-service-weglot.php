@@ -13,6 +13,10 @@ use WeglotWP\Helpers\Helper_Menu_Options_Weglot;
  * @since 2.4.0
  */
 class Menu_Options_Service_Weglot {
+	/**
+	 * @var Option_Service_Weglot
+	 */
+	private $option_services;
 
 	/**
 	 * @since 2.4.0

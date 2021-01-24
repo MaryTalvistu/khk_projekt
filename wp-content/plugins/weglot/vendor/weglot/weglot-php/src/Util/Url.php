@@ -2,8 +2,8 @@
 
 namespace Weglot\Util;
 
-use Weglot\Util\Url\UrlConfig;
-use Weglot\Util\Url\UrlTranslate;
+use Weglot\Client\Api\LanguageEntry;
+
 
 /**
  * Class Url
@@ -27,31 +27,68 @@ class Url
     protected $query = null;
 
     /**
+     * @var null|string
+     */
+    protected $fragment = null;
+
+    /**
      * @var null|array
      */
     protected $allUrls = null;
 
     /**
-     * @var UrlConfig
+     * @var LanguageEntry
      */
-    protected $config = null;
+    protected $currentLanguage = null;
 
     /**
-     * @var UrlTranslate
+     * @var string
      */
-    protected $translate = null;
+    protected $url;
+
+    /**
+     * @var LanguageEntry
+     */
+    protected $originalLanguage;
+
+    /**
+     * @var LanguageEntry[]
+     */
+    protected $destinationLanguages;
+
+    /**
+     * @var string
+     */
+    protected $pathPrefix;
+
+    /**
+     * @var array
+     */
+    protected $excludedUrls;
+
+    /**
+     * @var array
+     */
+    protected $customUrls;
 
     /**
      * Url constructor.
      * @param string $url           Current visited url
-     * @param string $default       Default language represented by ISO 639-1 code
-     * @param array $languages      All available languages
-     * @param string $pathPrefix    Prefix to access website root path (ie. : `/my/custom/path`, don't forget: starting `/` and no ending `/`)
+     * @param LanguageEntry $originalLanguage       Default language represented by ISO 639-1 code
+     * @param LanguageEntry[] $destinationLanguages      All available languages
+     * @param null|string $pathPrefix    Prefix to access website root path (ie. : `/my/custom/path`, don't forget: starting `/` and no ending `/`)
+     * @param array $excludedUrls  Array of excluded URL with regex and languages
+     * @param array $customUrls  Array of custom URLs (translated URLs)
      */
-    public function __construct($url, $default, $languages = [], $pathPrefix = '')
+    public function __construct($url, $originalLanguage, $destinationLanguages, $pathPrefix , $excludedUrls, $customUrls)
     {
-        $this->config = new UrlConfig($url, $pathPrefix);
-        $this->translate = new UrlTranslate($default, $languages);
+        $this->url = $url;
+        $this->originalLanguage = $originalLanguage;
+        $this->destinationLanguages = $destinationLanguages;
+        $this->pathPrefix = $pathPrefix;
+        $this->excludedUrls = $excludedUrls;
+        $this->customUrls = $customUrls;
+        $this->detectUrlDetails();
     }
 
     /**
@@ -59,7 +96,7 @@ class Url
      */
     public function getUrl()
     {
-        return $this->config->getRaw();
+        return $this->url;
     }
 
     /**
@@ -79,21 +116,11 @@ class Url
     }
 
     /**
-     * @deprecated Use getPath() instead
-     * @return null|string
-     */
-    public function getBaseUrl()
-    {
-        @trigger_error('Use getPath() instead', E_USER_DEPRECATED);
-        return $this->getPath();
-    }
-
-    /**
      * @return string
      */
     public function getPathPrefix()
     {
-        return $this->config->getPathPrefix();
+        return $this->pathPrefix;
     }
 
     /**
@@ -102,8 +129,7 @@ class Url
      */
     public function setExcludedUrls($excludedUrls)
     {
-        $this->config->setExcludedUrls($excludedUrls);
-
+        $this->excludedUrls = $excludedUrls;
         return $this;
     }
 
@@ -112,7 +138,7 @@ class Url
      */
     public function getDefault()
     {
-        return $this->translate->getDefault();
+        return $this->originalLanguage;
     }
 
     /**
@@ -124,61 +150,87 @@ class Url
     }
 
     /**
-     * @param string $code  Language represented by ISO 639-1 code
+     * @return null|string
+     */
+    public function getFragment()
+    {
+        return $this->fragment;
+    }
+
+    /**
+     * @return null|string
+     */
+    public function getPathAndQuery()
+    {
+        $pathAndQuery = $this->path;
+        if (!is_null($this->getQuery())) {
+            $pathAndQuery .= '?'. $this->getQuery();
+        }
+        return $pathAndQuery;
+    }
+
+    /**
+     * Returns the destination languages external codes
+     * @return string[]
+     */
+    public function getDestinationLanguagesExternal() {
+        return array_map( function( $l ) { return $l->getExternalCode();}, $this->destinationLanguages);
+    }
+
+    /**
+     * @param LanguageEntry $language
      * @return bool|string
      */
-    public function getForLanguage($code)
+    public function getForLanguage($language)
     {
-        $url = false;
-
-        if ($this->translate->checkIfAvailable($code)) {
-            $all = $this->currentRequestAllUrls();
-            $url = $all[$code];
+        $urls = $this->getAllUrls();
+        foreach ($urls as $url) {
+            if($url['language'] === $language) {
+                return $url['url'];
+            }
         }
-
-        return $url;
+        return false;
     }
 
     /**
      * Check if we need to translate given URL
      *
+     * @param LanguageEntry $language
      * @return bool
      */
-    public function isTranslable()
+    public function isTranslableInLanguage( $language )
     {
-        if ($this->getPath() === null) {
-            $this->detectUrlDetails();
+        if($this->getForLanguage($language)) {
+            return true;
         }
+        return false;
+    }
 
-        foreach ($this->config->getExcludedUrls() as $regex) {
-            $escapedRegex = Text::escapeForRegex($regex);
-            $fullRegex = sprintf('/%s/', $escapedRegex);
-
-            if (preg_match($fullRegex, $this->getPath()) === 1) {
-                return false;
+    /**
+     * Check if we need to translate given URL
+     *
+     * @param LanguageEntry $language
+     * @return bool
+     */
+    public function availableInLanguages()
+    {
+        $availableLanguage = [];
+        foreach ($this->destinationLanguages as $destinationLanguage) {
+            if($this->getForLanguage($destinationLanguage)) {
+                $availableLanguage[] = $destinationLanguage;
             }
         }
-
-        return true;
+        return $availableLanguage;
     }
 
     /**
      * Check current locale, based on URI segments from the given URL
      *
-     * @return mixed
+     * @return LanguageEntry
      */
-    public function detectCurrentLanguage()
+    public function getCurrentLanguage()
     {
-        // parsing url to get only path & removing prefix if there is one
-        $escapedPathPrefix = Text::escapeForRegex($this->config->getPathPrefix());
-        $uriPath = parse_url($this->config->getRaw(), PHP_URL_PATH);
-        $uriPath = preg_replace('/^' . $escapedPathPrefix . '/s', '', $uriPath);
-        $uriSegments = explode('/', $uriPath);
-
-        if (isset($uriSegments[1]) && in_array($uriSegments[1], $this->translate->getLanguages())) {
-            return $uriSegments[1];
-        }
-        return $this->translate->getDefault();
+        return $this->currentLanguage;
     }
 
     /**
@@ -192,31 +244,56 @@ class Url
             return;
         }
 
-        $escapedPathPrefix = Text::escapeForRegex($this->config->getPathPrefix());
-        $languages = implode('|', $this->translate->getLanguages());
+        $escapedPathPrefix = Text::escapeForRegex($this->pathPrefix);
+        $languages = implode('|', $this->getDestinationLanguagesExternal());
 
-        $fullUrl = preg_replace('#' . $escapedPathPrefix . '\/(' . $languages . ')$#i', '', $this->getUrl());
-        $fullUrl = preg_replace('#' . $escapedPathPrefix . '\/(' . $languages . ')/#i', '/', $fullUrl);
-        $parsed = parse_url($fullUrl);
+        $urlNoPrefix = preg_replace('#' . $escapedPathPrefix . '#i', '', $this->getUrl());
+
+        $uriPath = parse_url($urlNoPrefix, PHP_URL_PATH);
+        $uriSegments = explode('/', $uriPath);
+
+        if (isset($uriSegments[1]) && in_array($uriSegments[1], $this->getDestinationLanguagesExternal() ) ) {
+            foreach ($this->destinationLanguages as $language) {
+                if($language->getExternalCode() === $uriSegments[1]) {
+                    $this->currentLanguage = $language;
+                }
+            }
+        } else {
+            $this->currentLanguage = $this->originalLanguage;
+        }
+
+        $urlNoPrefixNoLanguage = str_replace('/' . $this->currentLanguage->getExternalCode() . '/', '/', $urlNoPrefix);
+
+        $parsed = parse_url($urlNoPrefixNoLanguage);
 
         if(isset($parsed['scheme'])) {
             $this->host = $parsed['scheme'] . '://' . $parsed['host'] . (isset($parsed['port']) ? ':'.$parsed['port'] : '');
         }
         $this->path = isset($parsed['path']) ? $parsed['path'] : '/';
         $this->query = isset($parsed['query']) ? $parsed['query'] : null;
-
-        if (preg_match('#^' .$this->config->getPathPrefix(). '#i', $this->path)) {
-            $this->path = preg_replace('#^' .$this->config->getPathPrefix(). '#i', '', $this->path);
-        }
+        $this->fragment = isset($parsed['fragment']) ? $parsed['fragment'] : null;
 
         if ($this->path === "") {
             $this->path = '/';
+        }
+
+        //We need to change the path to the original path if there are custom URL
+        if(isset($this->customUrls[$this->currentLanguage->getInternalCode()])) {
+            foreach( $this->customUrls[$this->currentLanguage->getInternalCode()]  as $translatedURL => $originalURL ) {
+                $this->path = str_replace('/' . $originalURL , '/404' ,$this->path);  //If we receive a not translated slug we return a 404. For example if we have /fr/products but should have /fr/produits we should have a 404
+                $this->path = str_replace('/' . $translatedURL , '/' . $originalURL ,$this->path);
+            }
         }
 
         $url = $this->getHost() . $this->getPathPrefix() . $this->getPath();
         if (!is_null($this->getQuery())) {
             $url .= '?'. $this->getQuery();
         }
+
+        if (!is_null($this->getFragment())) {
+            $url .= '#'. $this->getFragment();
+        }
+
         return $url;
     }
 
@@ -225,7 +302,7 @@ class Url
      *
      * @return array
      */
-    public function currentRequestAllUrls()
+    public function getAllUrls()
     {
         if (defined('WP_CLI') && WP_CLI) {
             return array();
@@ -234,22 +311,40 @@ class Url
         $urls = $this->allUrls;
 
         if ($urls === null) {
-            if ($this->getPath() === null) {
-                $this->detectUrlDetails();
-            }
 
             $urls = [];
-            $current = $this->getHost() . $this->config->getPathPrefix() . $this->getPath();
+            $originalURL = $this->getHost() . $this->getPathPrefix() . $this->getPath();
             if (!is_null($this->getQuery())) {
-                $current .= '?'. $this->getQuery();
+                $originalURL .= '?'. $this->getQuery();
             }
-            $urls[$this->translate->getDefault()] = $current;
-            foreach ($this->translate->getLanguages() as $language) {
-                $current = $this->getHost() . $this->config->getPathPrefix() . '/' . $language . $this->getPath();
-                if (!is_null($this->getQuery())) {
-                    $current .= '?'. $this->getQuery();
+            if (!is_null($this->getFragment())) {
+                $originalURL .= '#'. $this->getFragment();
+            }
+
+            $urls[] = array( 'language' => $this->originalLanguage, 'url' => $originalURL);
+            foreach ($this->destinationLanguages as $language) {
+
+                foreach ($this->excludedUrls as $excludedUrl) {
+                    if( $excludedUrl[1] === null || ( is_array($excludedUrl[1]) && in_array($language, $excludedUrl[1]) ) ) {
+                        if( preg_match('#' . $excludedUrl[0] . '#', $this->getPath()) != 0)
+                            continue 2;
+                    }
                 }
-                $urls[$language] = $current;
+
+                $translatedPath = $this->getPath();
+                if(isset($this->customUrls[$language->getInternalCode()])) {
+                    foreach ($this->customUrls[$language->getInternalCode()] as $translatedURL => $originalURL) {
+                        $translatedPath = str_replace('/' . $originalURL , '/' . $translatedURL , $translatedPath);
+                    }
+                }
+                $url = $this->getHost() . $this->getPathPrefix() . '/' . $language->getExternalCode() . $translatedPath;
+                if (!is_null($this->getQuery())) {
+                    $url .= '?'. $this->getQuery();
+                }
+                if (!is_null($this->getFragment())) {
+                    $url .= '#'. $this->getFragment();
+                }
+                $urls[] = array( 'language' => $language, 'url' => $url);
             }
 
             $this->allUrls = $urls;
@@ -266,10 +361,10 @@ class Url
     public function generateHrefLangsTags()
     {
         $render = '';
-        $urls = $this->currentRequestAllUrls();
+        $urls = $this->getAllUrls();
 
-        foreach ($urls as $language => $url) {
-            $render .= '<link rel="alternate" href="' .$url. '" hreflang="' .$language. '"/>'."\n";
+        foreach ($urls as $url) {
+            $render .= '<link rel="alternate" href="' . $url['url'] . '" hreflang="' .  $url['language']->getExternalCode() . '"/>'."\n";
         }
 
         return $render;

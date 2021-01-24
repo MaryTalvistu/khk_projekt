@@ -6,10 +6,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Exception;
 use WeglotWP\Helpers\Helper_Tabs_Admin_Weglot;
 use WeglotWP\Helpers\Helper_Pages_Weglot;
 use WeglotWP\Helpers\Helper_Flag_Type;
 use WeglotWP\Models\Hooks_Interface_Weglot;
+use WeglotWP\Services\Option_Service_Weglot;
+use WeglotWP\Services\User_Api_Service_Weglot;
 
 /**
  * Sanitize options after submit form
@@ -17,8 +20,17 @@ use WeglotWP\Models\Hooks_Interface_Weglot;
  * @since 2.0
  */
 class Options_Weglot implements Hooks_Interface_Weglot {
+	/**
+	 * @var Option_Service_Weglot
+	 */
+	private $option_services;
+	/**
+	 * @var User_Api_Service_Weglot
+	 */
+	private $user_api_services;
 
 	/**
+	 * @throws Exception
 	 * @since 2.0
 	 */
 	public function __construct() {
@@ -27,11 +39,12 @@ class Options_Weglot implements Hooks_Interface_Weglot {
 	}
 
 	/**
+	 * @return void
+	 * @throws Exception
+	 * @version 3.0.0
 	 * @see Hooks_Interface_Weglot
 	 *
 	 * @since 2.0
-	 * @version 3.0.0
-	 * @return void
 	 */
 	public function hooks() {
 		add_action( 'admin_post_weglot_save_settings', array( $this, 'weglot_save_settings' ) );
@@ -60,12 +73,12 @@ class Options_Weglot implements Hooks_Interface_Weglot {
 		$redirect_url = admin_url( 'admin.php?page=' . Helper_Pages_Weglot::SETTINGS );
 		if ( ! isset( $_GET['tab'] ) || ! isset( $_GET['_wpnonce'] ) ) { //phpcs:ignore
 			wp_redirect( $redirect_url );
-			return;
+			exit;
 		}
 
 		if ( ! wp_verify_nonce( $_GET[ '_wpnonce' ], 'weglot_save_settings' ) ) { //phpcs:ignore
 			wp_redirect( $redirect_url );
-			return;
+			exit;
 		}
 
 		$tab = $_GET[ 'tab' ]; //phpcs:ignore
@@ -106,7 +119,7 @@ class Options_Weglot implements Hooks_Interface_Weglot {
 				}
 				break;
 			case Helper_Tabs_Admin_Weglot::SUPPORT:
-				if ( array_key_exists( 'active_wc_reload', $options ) && $options['active_wc_reload'] === 'on' ) {
+				if ( array_key_exists( 'active_wc_reload', $options ) && 'on' === $options['active_wc_reload'] ) {
 					$options_bdd['active_wc_reload'] = true;
 				} else {
 					$options_bdd['active_wc_reload'] = false;
@@ -179,12 +192,6 @@ class Options_Weglot implements Hooks_Interface_Weglot {
 		$options['custom_settings']['translate_amp']    = isset( $options['custom_settings']['translate_amp'] );
 
 		$options['auto_switch'] = isset( $options['auto_switch'] );
-		foreach ( $options['languages'] as $key => $language ) {
-			if ( 'active' === $key ) {
-				continue;
-			}
-			$options['languages'][ $key ]['enabled'] = ! isset( $options['languages'][ $key ]['enabled'] );
-		}
 
 		if ( ! isset( $options['excluded_blocks'] ) ) {
 			$options['excluded_blocks'] = array();

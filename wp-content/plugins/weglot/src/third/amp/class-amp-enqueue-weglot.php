@@ -6,8 +6,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Exception;
 use WeglotWP\Models\Hooks_Interface_Weglot;
 use WeglotWP\Helpers\Helper_Flag_Type;
+use WeglotWP\Services\Button_Service_Weglot;
+use WeglotWP\Services\Language_Service_Weglot;
+use WeglotWP\Services\Option_Service_Weglot;
+use WeglotWP\Services\Request_Url_Service_Weglot;
 
 
 /**
@@ -16,6 +21,10 @@ use WeglotWP\Helpers\Helper_Flag_Type;
  * @since 2.0
  */
 class Amp_Enqueue_Weglot implements Hooks_Interface_Weglot {
+	/**
+	 * @var Option_Service_Weglot
+	 */
+	private $option_services;
 
 	/**
 	 * @since 2.0
@@ -25,10 +34,11 @@ class Amp_Enqueue_Weglot implements Hooks_Interface_Weglot {
 	}
 
 	/**
+	 * @return void
+	 * @throws Exception
 	 * @since 2.0
 	 * @see Hooks_Interface_Weglot
 	 *
-	 * @return void
 	 */
 	public function hooks() {
 		if ( ! defined( 'AMPFORWP_PLUGIN_DIR' ) && ! defined( 'AMP__VERSION' ) ) {
@@ -46,21 +56,29 @@ class Amp_Enqueue_Weglot implements Hooks_Interface_Weglot {
 
 
 	/**
-	 * @since 3.1.7
-	 *
+	 * @param $html
 	 * @return string
+	 * @throws Exception
+	 * @since 3.1.7
 	 */
 	public function weglot_amp_css( $html ) {
 
-		$button_service = weglot_get_service( 'Button_Service_Weglot' );
-		$weglot_url     = $button_service->request_url_services->get_weglot_url();
-		$amp_regex      = $button_service->amp_services->get_regex( true );
+		/** @var Request_Url_Service_Weglot $request_url_service */
+		$request_url_service = weglot_get_service( 'Request_Url_Service_Weglot' );
+		$weglot_url          = $request_url_service->get_weglot_url();
 
-		if ( ! weglot_get_translate_amp_translation() || ! preg_match( '#' . $amp_regex . '#', $weglot_url->getUrl() ) === 1 ) {
+		/** @var Amp_Service_Weglot $amp_service */
+		$amp_service = weglot_get_service( 'Amp_Service_Weglot' );
+		$amp_regex   = $amp_service->get_regex( true );
+
+		if ( ! $this->option_services->get_option_custom_settings( 'translate_amp' ) || ! preg_match( '#' . $amp_regex . '#', $weglot_url->getUrl() ) === 1 ) {
 			return $html;
 		}
 
-		$languages_configured = weglot_get_all_languages_configured();
+		/** @var Language_Service_Weglot $language_service */
+		$language_service = weglot_get_service( 'Language_Service_Weglot' );
+
+		$languages_configured = $language_service->get_original_and_destination_languages( $request_url_service->is_allowed_private() );
 		$flags_positions      = $this->weglot_get_flags_positions();
 		$type_flags           = weglot_get_option( 'type_flags' );
 		$type_flags           = Helper_Flag_Type::get_flag_number_with_type( $type_flags );
@@ -82,7 +100,7 @@ class Amp_Enqueue_Weglot implements Hooks_Interface_Weglot {
 		if ( $with_flags ) {
 			foreach ( $languages_configured as $lang ) {
 
-				$lang = $this->option_services->get_iso_code_from_custom_code( $lang );
+				$lang = $lang->getInternalCode();
 				if ( ! empty( $flags_positions[ $type_flags ][ $lang ] ) ) {
 					$css .= '.weglot-flags.flag-' . $type_flags . '.' . $lang . ' > a:before, .weglot-flags.flag-' . $type_flags . '.' . $lang . ' > span:before { background-position: ' . $flags_positions[ $type_flags ][ $lang ] . 'px 0; }';
 				}

@@ -30,7 +30,12 @@ class Schema_Option_V3 {
 						return $destinations;
 					}
 					foreach ( $languages as $item ) {
-						$destinations[] = $item['language_to'];
+						$destinations[] = array(
+							'language_to' => $item['language_to'],
+							'custom_code' => $item['custom_code'],
+							'custom_name' => $item['custom_name'],
+							'public'      => $item['enabled'],
+						);
 					}
 
 					return $destinations;
@@ -39,14 +44,10 @@ class Schema_Option_V3 {
 			'private_mode'            => (object) array(
 				'path' => 'languages',
 				'fn'   => function( $languages ) {
-					$private = array( 'active' => false );
-					if ( ! $languages ) {
-						return $private;
-					}
+					$private = array();
 					foreach ( $languages as $item ) {
 						if ( ! $item['enabled'] ) {
 							$private[ $item['language_to'] ] = true;
-							$private['active']               = true;
 						} else {
 							$private[ $item['language_to'] ] = false;
 						}

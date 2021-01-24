@@ -346,6 +346,10 @@
       border-width: 50px;
       color: #a6a6a6;
       display: block; }
+  #weglot-url-translate p.weglot-keyres,
+  #wrap-weglot p.weglot-keyres {
+    font-style: italic;
+    color: #ff6464; }
   #weglot-url-translate .weglot_text_error,
   #wrap-weglot .weglot_text_error {
     color: #dc3232; }

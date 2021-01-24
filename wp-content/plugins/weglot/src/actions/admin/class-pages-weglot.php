@@ -9,6 +9,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 use WeglotWP\Models\Hooks_Interface_Weglot;
 use WeglotWP\Helpers\Helper_Pages_Weglot;
 use WeglotWP\Helpers\Helper_Tabs_Admin_Weglot;
+use WeglotWP\Services\Button_Service_Weglot;
+use WeglotWP\Services\Language_Service_Weglot;
+use WeglotWP\Services\Option_Service_Weglot;
+use WeglotWP\Services\User_Api_Service_Weglot;
+use WeglotWP\Third\Woocommerce\Wc_Active;
 
 /**
  * Register pages administration
@@ -17,15 +22,48 @@ use WeglotWP\Helpers\Helper_Tabs_Admin_Weglot;
  *
  */
 class Pages_Weglot implements Hooks_Interface_Weglot {
+	/**
+	 * @var Option_Service_Weglot
+	 */
+	private $option_services;
+	/**
+	 * @var User_Api_Service_Weglot
+	 */
+	private $user_api_services;
+	/**
+	 * @var Language_Service_Weglot
+	 */
+	private $language_services;
+	/**
+	 * @var Button_Service_Weglot
+	 */
+	private $button_services;
+	/**
+	 * @var array
+	 */
+	private $options;
+	/**
+	 * @var array|array[]
+	 */
+	private $tabs;
+	/**
+	 * @var string
+	 */
+	private $tab_active;
+	/**
+	 * @var Wc_Active
+	 */
+	private $wc_active_services;
+
 
 	/**
 	 * @since 2.0
 	 */
 	public function __construct() {
 		$this->option_services    = weglot_get_service( 'Option_Service_Weglot' );
+		$this->user_api_services  = weglot_get_service( 'User_Api_Service_Weglot' );
 		$this->language_services  = weglot_get_service( 'Language_Service_Weglot' );
 		$this->button_services    = weglot_get_service( 'Button_Service_Weglot' );
-		$this->user_api_services  = weglot_get_service( 'User_Api_Service_Weglot' );
 		$this->wc_active_services = weglot_get_service( 'Wc_Active' );
 		return $this;
 	}
@@ -119,15 +157,14 @@ class Pages_Weglot implements Hooks_Interface_Weglot {
 	/**
 	 * Page settings
 	 *
+	 * @return void
+	 * @throws \Exception
 	 * @since 2.0
 	 *
-	 * @return void
 	 */
 	public function weglot_plugin_settings_page() {
 		$this->tabs       = Helper_Tabs_Admin_Weglot::get_full_tabs();
 		$this->tab_active = Helper_Tabs_Admin_Weglot::SETTINGS;
-
-		//delete_transient( 'weglot_cache_cdn' );
 
 		if ( isset( $_GET['tab'] ) ) { // phpcs:ignore
 			$this->tab_active = sanitize_text_field( wp_unslash( $_GET['tab'] ) ); // phpcs:ignore
@@ -137,7 +174,9 @@ class Pages_Weglot implements Hooks_Interface_Weglot {
 
 		try {
 			$user_info = $this->user_api_services->get_user_info();
-			$this->option_services->set_option_by_key( 'allowed', $user_info['allowed'] );
+			if ( isset( $user_info['allowed'] ) ) {
+				$this->option_services->set_option_by_key( 'allowed', $user_info['allowed'] );
+			}
 		} catch ( \Exception $e ) {
 			// If an exception occurs, do nothing, keep wg_allowed.
 		}

@@ -2,6 +2,9 @@
 
 namespace WeglotWP\Widgets;
 
+use WeglotWP\Services\Button_Service_Weglot;
+use WeglotWP\Services\Request_Url_Service_Weglot;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -25,13 +28,16 @@ class Widget_Selector_Weglot extends \WP_Widget {
 	/**
 	 * Front-end display of widget.
 	 *
+	 * @param array $args Widget arguments.
+	 * @param array $instance Saved values from database.
+	 * @throws \Exception
 	 * @see WP_Widget::widget()
 	 *
-	 * @param array $args     Widget arguments.
-	 * @param array $instance Saved values from database.
 	 */
 	public function widget( $args, $instance ) {
-		if ( ! weglot_current_url_is_eligible() ) {
+		/** @var Request_Url_Service_Weglot $request_url_service */
+		$request_url_service = weglot_get_service( 'Request_Url_Service_Weglot' );
+		if ( ! $request_url_service->is_eligible_url() ) {
 			return;
 		}
 		$title = ( isset( $instance['title'] ) ) ? $instance['title'] : '';
@@ -39,7 +45,9 @@ class Widget_Selector_Weglot extends \WP_Widget {
 
 		$tt = ( ! empty( $title ) ) ? $args['before_title'] . $title . $args['after_title'] : '';
 
-		$button = weglot_get_button_selector_html( 'weglot-widget' );
+		/** @var $button_service Button_Service_Weglot */
+		$button_service = weglot_get_service( 'Button_Service_Weglot' );
+		$button         = $button_service->get_html( 'weglot-widget' );
 
 		echo $args['before_widget'] . $tt . $button . $args['after_widget']; //phpcs:ignore
 	}
@@ -78,7 +86,7 @@ class Widget_Selector_Weglot extends \WP_Widget {
 	 */
 	public function update( $new_instance, $old_instance ) {
 		$instance          = array();
-		$instance['title'] = ( ! empty( $new_instance['title'] ) ) ? sanitize_text_field( strip_tags( $new_instance['title'] ) ) : '';
+		$instance['title'] = ( ! empty( $new_instance['title'] ) ) ? sanitize_text_field( wp_strip_all_tags( $new_instance['title'] ) ) : '';
 		return $instance;
 	}
 }

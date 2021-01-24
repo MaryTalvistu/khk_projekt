@@ -19,8 +19,8 @@ $options_available = [
 <hr>
 
 <table class="form-table">
-    <tbody>
-		<?php if ($this->wc_active_services->is_active()): ?>
+	<tbody>
+		<?php if ( $this->wc_active_services->is_active() ) : ?>
 			<tr valign="top">
 				<th scope="row" class="titledesc">
 					<label for="<?php echo esc_attr( $options_available['active_wc_reload']['key'] ); ?>">

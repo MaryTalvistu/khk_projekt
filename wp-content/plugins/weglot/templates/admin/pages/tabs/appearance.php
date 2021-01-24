@@ -15,7 +15,7 @@ $options_available = [
 	'is_fullname' => [
 		'key'         => 'is_fullname',
 		'label'       => __( 'Is fullname', 'weglot' ),
-		'description' => __( "Check if you want the name of the languge. Don't check if you want the language code.", 'weglot' ),
+		'description' => __( "Check if you want the name of the language. Don't check if you want the language code.", 'weglot' ),
 	],
 	'with_name' => [
 		'key'         => 'with_name',
@@ -208,6 +208,11 @@ $options_available = [
 						<option value=0><?php esc_html_e( 'Taiwan (default)', 'weglot' ); ?></option>
 						<option value=1><?php esc_html_e( 'China', 'weglot' ); ?></option>
 						<option value=2><?php esc_html_e( 'Hong Kong', 'weglot' ); ?></option>
+					</select>
+					<select class="flag-pt-type wg-input-select">
+						<option value=0><?php esc_html_e( 'Choose Portuguese flag:', 'weglot' ); ?></option>
+						<option value=0><?php esc_html_e( 'Portugal (default)', 'weglot' ); ?></option>
+						<option value=1><?php esc_html_e( 'Brazil', 'weglot' ); ?></option>
 					</select>
 					<p><?php esc_html_e( 'If you want to use a different flag, just ask us.', 'weglot' ); ?></p>
 				</div>

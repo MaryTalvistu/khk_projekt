@@ -6,11 +6,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Exception;
+use Weglot\Client\Api\LanguageEntry;
 use WeglotWP\Helpers\Helper_Is_Admin;
 use WeglotWP\Models\Hooks_Interface_Weglot;
 use WeglotWP\Helpers\Helper_Post_Meta_Weglot;
 use Weglot\Client\Api\Enum\BotType;
 use Weglot\Util\Server;
+use WeglotWP\Services\Href_Lang_Service_Weglot;
+use WeglotWP\Services\Language_Service_Weglot;
+use WeglotWP\Services\Option_Service_Weglot;
+use WeglotWP\Services\Redirect_Service_Weglot;
+use WeglotWP\Services\Request_Url_Service_Weglot;
+use WeglotWP\Services\Translate_Service_Weglot;
 
 
 /**
@@ -20,27 +28,54 @@ use Weglot\Util\Server;
  */
 class Translate_Page_Weglot implements Hooks_Interface_Weglot {
 	/**
-	 * @var object
+	 * @var Option_Service_Weglot
 	 */
 	private $option_services;
 
 	/**
+	 * @var LanguageEntry
+	 */
+	private $current_language;
+	/**
+	 * @var Request_Url_Service_Weglot
+	 */
+	private $request_url_services;
+	/**
+	 * @var Language_Service_Weglot
+	 */
+	private $language_services;
+	/**
+	 * @var Redirect_Service_Weglot
+	 */
+	private $redirect_services;
+	/**
+	 * @var Translate_Service_Weglot
+	 */
+	private $translate_services;
+	/**
+	 * @var Href_Lang_Service_Weglot
+	 */
+	private $href_lang_services;
+
+	/**
+	 * @throws Exception
 	 * @since 2.0
 	 */
 	public function __construct() {
-		$this->option_services           = weglot_get_service( 'Option_Service_Weglot' );
-		$this->request_url_services      = weglot_get_service( 'Request_Url_Service_Weglot' );
-		$this->redirect_services         = weglot_get_service( 'Redirect_Service_Weglot' );
-		$this->translate_services        = weglot_get_service( 'Translate_Service_Weglot' );
-		$this->private_language_services = weglot_get_service( 'Private_Language_Service_Weglot' );
-		$this->href_lang_services        = weglot_get_service( 'Href_Lang_Service_Weglot' );
+		$this->option_services      = weglot_get_service( 'Option_Service_Weglot' );
+		$this->request_url_services = weglot_get_service( 'Request_Url_Service_Weglot' );
+		$this->redirect_services    = weglot_get_service( 'Redirect_Service_Weglot' );
+		$this->translate_services   = weglot_get_service( 'Translate_Service_Weglot' );
+		$this->href_lang_services   = weglot_get_service( 'Href_Lang_Service_Weglot' );
+		$this->language_services    = weglot_get_service( 'Language_Service_Weglot' );
 	}
 
 	/**
+	 * @return void
+	 * @throws Exception
 	 * @see Hooks_Interface_Weglot
 	 *
 	 * @since 2.0
-	 * @return void
 	 */
 	public function hooks() {
 		if ( Helper_Is_Admin::is_wp_admin() ) {
@@ -51,29 +86,12 @@ class Translate_Page_Weglot implements Hooks_Interface_Weglot {
 			return;
 		}
 
-		$this->api_key = $this->option_services->get_option( 'api_key' );
-
-		if ( ! $this->api_key ) {
-			return;
-		}
-
-		if (
-			null === $this->request_url_services->get_current_language() ||
-			! $this->request_url_services->is_translatable_url()
-		) {
-			return;
-		}
-		$this->request_url_services->init_weglot_url();
-		$this->request_url_services->get_weglot_url()->detectUrlDetails();
-		$this->current_language = $this->request_url_services->get_current_language();
-
-		if ( $this->private_language_services->is_active_private_mode_for_lang( $this->current_language ) ) {
+		if ( ! $this->option_services->get_option( 'api_key' ) ) {
 			return;
 		}
 
 		$this->prepare_request_uri();
 		$this->prepare_rtl_language();
-
 		add_action( 'init', array( $this, 'weglot_init' ), 11 );
 		add_action( 'wp_head', array( $this, 'weglot_href_lang' ) );
 	}
@@ -116,34 +134,35 @@ class Translate_Page_Weglot implements Hooks_Interface_Weglot {
 	}
 
 	/**
+	 * @return void
+	 * @throws Exception
+	 * @version 2.3.0
 	 * @see init
 	 * @since 2.0
-	 * @version 2.3.0
-	 * @return void
 	 */
 	public function weglot_init() {
 		do_action( 'weglot_init_start' );
 
-		if ( $this->no_translate_action_ajax() ) {
+		//We refresh the current language as now the wp_doing_ajax is valid
+		$this->current_language = $this->request_url_services->get_current_language();
+
+		if ( ! $this->option_services->get_option( 'original_language' ) ) {
 			return;
 		}
 
-		$this->noredirect        = false;
-		$this->original_language = $this->option_services->get_option( 'original_language' );
-		if ( empty( $this->original_language ) ) {
-			return;
+		if($this->request_url_services->is_allowed_private()) {
+			if(!isset($_COOKIE['weglot_allow_private'])) {
+				setcookie("weglot_allow_private" , true, time() + 86400 * 2, '/' ); //phpcs:ignore
+			}
 		}
-
-		$full_url_no_language = $this->request_url_services->get_full_url_no_language();
 
 		// URL not eligible
-		if ( ! $this->request_url_services->is_eligible_url( $full_url_no_language ) ) {
+		if ( ! $this->request_url_services->is_eligible_url() ) {
 			return;
 		}
 
 		$active_translation = apply_filters( 'weglot_active_translation_before_process', true );
 
-		// Default : yes
 		if ( ! $active_translation ) {
 			return;
 		}
@@ -158,7 +177,7 @@ class Translate_Page_Weglot implements Hooks_Interface_Weglot {
 		}
 
 		$active_translation = apply_filters( 'weglot_active_translation_before_treat_page', true );
-		// Default : yes
+
 		if ( ! $active_translation ) {
 			return;
 		}
@@ -166,9 +185,8 @@ class Translate_Page_Weglot implements Hooks_Interface_Weglot {
 		$file = apply_filters( 'weglot_debug_file', WEGLOT_DIR . '/content.html' );
 
 		if ( defined( 'WEGLOT_DEBUG' ) && WEGLOT_DEBUG && file_exists( $file ) ) {
-			$this->translate_services->set_original_language( weglot_get_original_language() );
+			$this->translate_services->set_original_language( $this->language_services->get_original_language() );
 			$this->translate_services->set_current_language( $this->request_url_services->get_current_language() );
-			// header( 'Content-Type: application/json' );
 			echo $this->translate_services->weglot_treat_page( file_get_contents( $file ) ); //phpcs:ignore
 			die;
 		} else {
@@ -177,9 +195,10 @@ class Translate_Page_Weglot implements Hooks_Interface_Weglot {
 	}
 
 	/**
+	 * @return void
+	 * @throws Exception
 	 * @since 2.0
 	 *
-	 * @return void
 	 */
 	public function check_need_to_redirect() {
 		if (
@@ -199,30 +218,15 @@ class Translate_Page_Weglot implements Hooks_Interface_Weglot {
 	 * @return void
 	 */
 	public function prepare_request_uri() {
-		$original_language = weglot_get_original_language();
-		$current_language  = $this->request_url_services->get_current_language( false );
+		$original_language = $this->language_services->get_original_language();
 
-		if ( $original_language === $current_language ) {
+		// We initialize the URL here for the first time, the current language might be wrong in case of ajax with the language in a referer because at this time wp_doing_ajax is always false.
+		$this->current_language = $this->request_url_services->get_current_language();
+
+		if ( $original_language === $this->current_language->getInternalCode() ) {
 			return;
 		}
-
-		$_SERVER['REQUEST_URI'] = str_replace(
-			'/' . $current_language . '/',
-			'/',
-			$_SERVER['REQUEST_URI']
-		);
-
-		$custom_urls               = $this->option_services->get_option( 'custom_urls' );
-		$to_translate_language_iso = $this->option_services->get_iso_code_from_custom_code( $current_language );
-
-		if ( isset( $custom_urls[ $to_translate_language_iso ] ) ) {
-			foreach ( $custom_urls[ $to_translate_language_iso ] as $key => $value ) {
-				//If we receive a not translated slug we return a 404. For example if we have /fr/products but should have /fr/produits we should have a 404
-				$_SERVER['REQUEST_URI'] = str_replace( '/' . $value . '/', '/404/', urldecode($_SERVER['REQUEST_URI']) );
-
-				$_SERVER['REQUEST_URI'] = str_replace( '/' . $key . '/', '/' . $value . '/', urldecode($_SERVER['REQUEST_URI']) );
-			}
-		}
+		$_SERVER['REQUEST_URI'] = $this->request_url_services->get_weglot_url()->getPathAndQuery();
 	}
 
 	/**
@@ -231,10 +235,10 @@ class Translate_Page_Weglot implements Hooks_Interface_Weglot {
 	 * @return void
 	 */
 	public function prepare_rtl_language() {
-		if ( $this->request_url_services->is_language_rtl( $this->current_language ) ) {
-			$GLOBALS['text_direction'] = 'rtl';
+		if ( $this->current_language->isRtl() ) {
+			$GLOBALS['text_direction'] = 'rtl'; // phpcs:ignore
 		} else {
-			$GLOBALS['text_direction'] = 'ltr';
+			$GLOBALS['text_direction'] = 'ltr'; // phpcs:ignore
 		}
 	}
 
@@ -245,6 +249,15 @@ class Translate_Page_Weglot implements Hooks_Interface_Weglot {
 	 * @return void
 	 */
 	public function weglot_href_lang() {
+		$remove_google_translate = apply_filters( 'weglot_remove_google_translate', true );
+		if ( $remove_google_translate ) {
+			$original_language = $this->language_services->get_original_language();
+			$current_language  = $this->request_url_services->get_current_language( false );
+			if ( $current_language !== $original_language ) {
+				echo "\n" . '<meta name="google" content="notranslate"/>';
+			}
+		}
+
 		echo $this->href_lang_services->generate_href_lang_tags(); //phpcs:ignore
 	}
 }

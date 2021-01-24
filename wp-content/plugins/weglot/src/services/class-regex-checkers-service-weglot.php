@@ -52,12 +52,12 @@ class Regex_Checkers_Service_Weglot {
 					if ( isset( $service ) ) {
 						$active = $service->is_active();
 						if ( $active ) {
-								$regexDir = WEGLOT_DIR . '/src/third/' . $third . '/regexcheckers/';
-							if ( is_dir( $regexDir ) ) {
-								$regexFiles = array_diff( scandir( WEGLOT_DIR . '/src/third/' . $third . '/regexcheckers/' ), array( '..', '.' ) );
+							$regex_dir = WEGLOT_DIR . '/src/third/' . $third . '/regexcheckers/';
+							if ( is_dir( $regex_dir ) ) {
+								$regex_files = array_diff( scandir( WEGLOT_DIR . '/src/third/' . $third . '/regexcheckers/' ), array( '..', '.' ) );
 
-								foreach ( $regexFiles as $regexFile ) {
-									$filename = Text::removeFileExtension( $regexFile );
+								foreach ( $regex_files as $regex_file ) {
+									$filename = Text::removeFileExtension( $regex_file );
 									$filename = str_replace( 'class-', '', $filename );
 									$filename = implode( '_', array_map( 'ucfirst', explode( '-', $filename ) ) );
 									$class    = '\\WeglotWP\\Third\\' . implode( '', array_map( 'ucfirst', explode( '-', $third ) ) ) . '\\Regexcheckers\\' . $filename;

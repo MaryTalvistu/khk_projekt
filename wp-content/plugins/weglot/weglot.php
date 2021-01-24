@@ -7,7 +7,7 @@ Author: Weglot Translate team
 Author URI: https://weglot.com/
 Text Domain: weglot
 Domain Path: /languages/
-Version: 3.2.0
+Version: 3.3.0
 */
 
 /**
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'WEGLOT_NAME', 'Weglot' );
 define( 'WEGLOT_SLUG', 'weglot-translate' );
 define( 'WEGLOT_OPTION_GROUP', 'group-weglot-translate' );
-define( 'WEGLOT_VERSION', '3.2.0' );
+define( 'WEGLOT_VERSION', '3.3.0' );
 define( 'WEGLOT_PHP_MIN', '5.4' );
 define( 'WEGLOT_BNAME', plugin_basename( __FILE__ ) );
 define( 'WEGLOT_DIR', __DIR__ );
@@ -32,13 +32,11 @@ define( 'WEGLOT_DIR_DIST', WEGLOT_DIR . '/dist' );
 define( 'WEGLOT_DIRURL', plugin_dir_url( __FILE__ ) );
 define( 'WEGLOT_URL_DIST', WEGLOT_DIRURL . 'dist' );
 define( 'WEGLOT_LATEST_VERSION', '2.7.0' );
-define( 'WEGLOT_LIB_PARSER', '1' );
 define( 'WEGLOT_DEBUG', false );
 define( 'WEGLOT_DEV', false );
 
 define( 'WEGLOT_TEMPLATES', WEGLOT_DIR . '/templates' );
 define( 'WEGLOT_TEMPLATES_ADMIN', WEGLOT_TEMPLATES . '/admin' );
-define( 'WEGLOT_TEMPLATES_ADMIN_METABOXES', WEGLOT_TEMPLATES_ADMIN . '/metaboxes' );
 define( 'WEGLOT_TEMPLATES_ADMIN_NOTICES', WEGLOT_TEMPLATES_ADMIN . '/notices' );
 define( 'WEGLOT_TEMPLATES_ADMIN_PAGES', WEGLOT_TEMPLATES_ADMIN . '/pages' );
 
@@ -125,8 +123,6 @@ function weglot_plugin_activate() {
  * @since 2.0
  */
 function weglot_plugin_deactivate() {
-	flush_rewrite_rules();
-
 	require_once __DIR__ . '/weglot-autoload.php';
 	require_once __DIR__ . '/vendor/autoload.php';
 	require_once __DIR__ . '/weglot-compatibility.php';
@@ -142,7 +138,6 @@ function weglot_plugin_deactivate() {
  * @since 2.0
  */
 function weglot_plugin_uninstall() {
-	flush_rewrite_rules();
 	delete_option( WEGLOT_SLUG );
 }
 
@@ -152,7 +147,7 @@ function weglot_plugin_uninstall() {
  * @return void
  */
 function weglot_rollback() {
-	if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( $_GET['_wpnonce'], 'weglot_rollback' ) ) {
+	if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( esc_url_raw( $_GET['_wpnonce'] ), 'weglot_rollback' ) ) {
 		wp_nonce_ays( '' );
 	}
 

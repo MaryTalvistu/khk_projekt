@@ -11,7 +11,7 @@ use Weglot\WeglotContext;
 <hr>
 
 <?php
-if ( ! empty( $_GET['reset-all-custom-urls'] ) && 'true' === $_GET['reset-all-custom-urls'] ) {
+if ( ! empty( $_GET['reset-all-custom-urls'] ) && 'true' === $_GET['reset-all-custom-urls'] ) { // phpcs:ignore
 	// Reset all customs URLs
 	$option_service_weglot = weglot_get_service( 'Option_Service_Weglot' );
 	$option_service_weglot->set_option_by_key( 'custom_urls', array() );
@@ -31,7 +31,7 @@ if ( ! empty( $_GET['reset-all-custom-urls'] ) && 'true' === $_GET['reset-all-cu
 
 	<?php
 	if ( ! empty( $options['custom_urls'] ) ) :
-		foreach ( $options['custom_urls'] as $lang => $urls ) :
+		foreach ( $options['custom_urls'] as $lang => $weglot_urls ) :
 			?>
 
 			<h3><?php esc_html_e( 'Lang : ', 'weglot' ); ?><?php echo esc_html( $lang ); ?></h3>
@@ -46,8 +46,8 @@ if ( ! empty( $_GET['reset-all-custom-urls'] ) && 'true' === $_GET['reset-all-cu
 				<div style="flex:1;"></div>
 			</div>
 			<?php
-			if ( ! empty( $urls ) ) :
-				foreach ( $urls as $key => $value ) :
+			if ( ! empty( $weglot_urls ) ) :
+				foreach ( $weglot_urls as $key => $value ) :
 					$key_generate = sprintf( '%s-%s-%s', $lang, $key, $value );
 					?>
 					<div style="display:flex;" id="<?php echo esc_attr( $key_generate ); ?>">
@@ -102,7 +102,7 @@ if ( ! empty( $_GET['reset-all-custom-urls'] ) && 'true' === $_GET['reset-all-cu
 		<hr />
 		<p><span class="dashicons dashicons-trash"></span> <a href="<?php echo esc_url( $url_reset_all_custom_urls ); ?>" class="reset-all-custom-urls" style="color: #dc3232;"><?php esc_html_e( 'Reset all Weglot custom URLs', 'weglot' ); ?></a></p>
 		<hr />
-	<?php elseif ( empty( $_GET['reset-all-custom-urls'] ) ) : ?>
+	<?php elseif ( empty( $_GET['reset-all-custom-urls'] ) ) : // phpcs:ignore ?>
 	<div class="error notice">
 		<p><?php esc_html_e( 'No custom URL found.', 'weglot' ); ?></p>
 	</div>

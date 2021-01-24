@@ -14,6 +14,10 @@ use WeglotWP\Helpers\Helper_Filter_Url_Weglot;
  * @since 3.0.0
  */
 class GF_Filter_Urls implements Hooks_Interface_Weglot {
+	/**
+	 * @var Gf_Active
+	 */
+	private $gf_active_services;
 
 	/**
 	 * @since 2.0
@@ -51,7 +55,7 @@ class GF_Filter_Urls implements Hooks_Interface_Weglot {
 			return $data;
 		}
 
-		$data['redirect'] = Helper_Filter_Url_Weglot::filter_url_with_ajax( $data['redirect'] );
+		$data['redirect'] = Helper_Filter_Url_Weglot::filter_url_lambda( $data['redirect'] );
 		return $data;
 
 	}

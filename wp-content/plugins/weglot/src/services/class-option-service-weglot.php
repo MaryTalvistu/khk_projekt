@@ -6,6 +6,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Exception;
+use http\Env\Request;
 use Morphism\Morphism;
 use Weglot\Util\Regex;
 use WeglotWP\Helpers\Helper_Is_Admin;
@@ -72,6 +74,7 @@ class Option_Service_Weglot {
 	);
 
 	/**
+	 * @throws Exception
 	 * @since 3.0.0
 	 */
 	public function __construct() {
@@ -118,10 +121,10 @@ class Option_Service_Weglot {
 		$key = str_replace( 'wg_', '', $api_key );
 		$url = sprintf( '%s%s.json', Helper_API::get_cdn_url(), $key );
 
-		$response = wp_remote_get(
+		$response = wp_remote_get( // phpcs:ignore
 			$url,
 			array(
-				'timeout' => 15,
+				'timeout' => 3,
 			)
 		);
 
@@ -131,6 +134,7 @@ class Option_Service_Weglot {
 				$body     = $response['result'];
 			} else {
 				$body = json_decode( $response['body'], true );
+				set_transient( 'weglot_cache_cdn', $body, apply_filters( 'weglot_get_options_from_cdn_cache_duration', 300 ) );
 			}
 			$this->options_cdn = $body;
 
@@ -138,7 +142,7 @@ class Option_Service_Weglot {
 				'success' => true,
 				'result'  => $body,
 			);
-		} catch ( \Exception $th ) {
+		} catch ( Exception $th ) {
 			return array(
 				'success' => false,
 			);
@@ -171,7 +175,7 @@ class Option_Service_Weglot {
 			$this->slugs_cache = $body;
 
 			return $body;
-		} catch ( \Exception $th ) {
+		} catch ( Exception $th ) {
 			return array();
 		}
 	}
@@ -191,33 +195,34 @@ class Option_Service_Weglot {
 
 		$url = sprintf( '%s/projects/settings?api_key=%s', Helper_API::get_api_url(), $api_key );
 
-		$response = wp_remote_get(
+		$response = wp_remote_get( // phpcs:ignore
 			$url,
 			array(
-				'timeout' => 15,
+				'timeout' => 3,
 			)
 		);
 
 		if ( is_wp_error( $response ) ) {
 			return array(
 				'success' => false,
-				'result'  => $this->options_default,
+				'result'  => $this->get_options_default(),
 			);
 		}
 
 		try {
 			$body = json_decode( $response['body'], true );
 
-			if ( null === $body ) {
+			if ( null === $body || !is_array($body)) {
 				return array(
 					'success' => false,
-					'result'  => $this->options_default,
+					'result'  => $this->get_options_default(),
 				);
 			}
 
 			$options                    = apply_filters( 'weglot_get_options', array_merge( $this->get_options_bdd_v3(), $body ) );
 			$options['api_key_private'] = $this->get_api_key_private();
 			if ( empty( $options['custom_settings']['menu_switcher'] ) ) {
+				/** @var $menu_options_services Menu_Options_Service_Weglot */
 				$menu_options_services                       = weglot_get_service( 'Menu_Options_Service_Weglot' );
 				$options['custom_settings']['menu_switcher'] = $menu_options_services->get_options_default();
 			}
@@ -227,7 +232,7 @@ class Option_Service_Weglot {
 				'success' => true,
 				'result'  => $options,
 			);
-		} catch ( \Exception $e ) {
+		} catch ( Exception $e ) {
 			return array(
 				'success' => false,
 			);
@@ -235,10 +240,10 @@ class Option_Service_Weglot {
 	}
 
 	/**
-	 * @since 3.0.0
 	 * @param string $api_key
-	 * @param string $l_to
+	 * @param $destinations_languages
 	 * @return array
+	 * @since 3.0.0
 	 */
 	public function get_slugs_from_api_with_api_key( $api_key, $destinations_languages ) {
 		if ( $this->slugs_from_api ) {
@@ -250,7 +255,7 @@ class Option_Service_Weglot {
 
 			$url = sprintf( '%s/translations/slugs?api_key=%s&&language_to=%s', Helper_API::get_api_url(), $api_key, $destinations_language );
 
-			$response = wp_remote_get( $url, array( 'timeout' => 15 ) );
+			$response = wp_remote_get( $url, array( 'timeout' => 3 ) ); // phpcs:ignore
 
 			if ( is_wp_error( $response ) ) {
 				continue;
@@ -268,7 +273,7 @@ class Option_Service_Weglot {
 					$slugs[ $destinations_language ] = array_flip( $body );
 
 				}
-			} catch ( \Exception $e ) {
+			} catch ( Exception $e ) {
 				continue;
 			}
 		}
@@ -279,12 +284,12 @@ class Option_Service_Weglot {
 	}
 
 	/**
-	 * @since 3.0.0
 	 * @return array
+	 * @throws Exception
+	 * @since 3.0.0
 	 */
 	public function get_options_from_v2() {
 		$options_v2 = get_option( WEGLOT_SLUG );
-		// $options_v2 = json_decode( file_get_contents(WEGLOT_DIR . '/settings-example.json'), true);
 
 		if ( $options_v2 ) {
 			if ( array_key_exists( 'api_key', $options_v2 ) ) {
@@ -300,9 +305,10 @@ class Option_Service_Weglot {
 	}
 
 	/**
-	 * @since 3.0.0
 	 * @param bool $compatibility
 	 * @return string
+	 * @throws Exception
+	 * @since 3.0.0
 	 */
 	public function get_api_key( $compatibility = false ) {
 		$api_key = get_option( sprintf( '%s-%s', WEGLOT_SLUG, 'api_key' ), false );
@@ -316,9 +322,10 @@ class Option_Service_Weglot {
 	}
 
 	/**
-	 * @since 3.0.0
 	 * @param bool $compatibility
 	 * @return bool
+	 * @throws Exception
+	 * @since 3.0.0
 	 */
 	public function get_has_first_settings( $compatibility = false ) {
 		$options = $this->get_options();
@@ -333,9 +340,10 @@ class Option_Service_Weglot {
 	}
 
 	/**
+	 * @return array
+	 * @throws Exception
 	 * @since 2.0
 	 * @version 3.0.0
-	 * @return array
 	 */
 	public function get_options() {
 		$api_key         = $this->get_api_key();
@@ -359,11 +367,13 @@ class Option_Service_Weglot {
 		$options = apply_filters( 'weglot_get_options', array_merge( $this->options_bdd_default, $this->get_options_bdd_v3(), $options ) );
 		$options = (array) Morphism::map( 'WeglotWP\Models\Schema_Option_V3', $options );
 
+		$destinations_languages = array_column( $options['destination_language'], 'language_to' );
+
 		if ( Helper_Is_Admin::is_wp_admin() && $api_key_private ) {
-			$slugs = $this->get_slugs_from_api_with_api_key( $api_key_private, $options['destination_language'] );
+			$slugs = $this->get_slugs_from_api_with_api_key( $api_key_private, $destinations_languages );
 		} else {
 			if ( ! Helper_Is_Admin::is_wp_admin() && $api_key ) {
-				$slugs = $this->get_slugs_from_cache_with_api_key( $api_key_private, $options['destination_language'] );
+				$slugs = $this->get_slugs_from_cache_with_api_key( $api_key_private, $destinations_languages );
 			}
 		}
 		if ( isset( $slugs ) ) {
@@ -406,10 +416,11 @@ class Option_Service_Weglot {
 	 * @return array
 	 */
 	public function save_options_to_weglot( $options ) {
-		$response = wp_remote_post(
+
+		$response = wp_remote_post( // phpcs:ignore
 			sprintf( '%s/projects/settings?api_key=%s', Helper_API::get_api_url(), $options['api_key_private'] ),
 			array(
-				'body'    => json_encode( $options ), //phpcs: ignore
+				'body'    => wp_json_encode( $options ), //phpcs: ignore
 				'headers' => array(
 					'technology'   => 'wordpress',
 					'Content-Type' => 'application/json; charset=utf-8',
@@ -430,9 +441,10 @@ class Option_Service_Weglot {
 	}
 
 	/**
-	 * @since 3.0.0
 	 * @param string $key
 	 * @return string|null
+	 * @throws Exception
+	 * @since 3.0.0
 	 */
 	public function get_option_custom_settings( $key ) {
 		$options = $this->get_options();
@@ -449,10 +461,10 @@ class Option_Service_Weglot {
 	}
 
 	/**
-	 * @since 2.0
 	 * @param string $key
-	 * @param string $language_to
-	 * @return array
+	 * @return array|string
+	 * @throws Exception
+	 * @since 2.0
 	 */
 	public function get_option( $key ) {
 		$options = $this->get_options();
@@ -465,9 +477,10 @@ class Option_Service_Weglot {
 	}
 
 	/**
-	 * @since 3.0.0
 	 * @param string $key
 	 * @return string|boolean|int
+	 * @throws Exception
+	 * @since 3.0.0
 	 */
 	public function get_option_button( $key ) {
 		$options = $this->get_options();
@@ -488,8 +501,9 @@ class Option_Service_Weglot {
 	}
 
 	/**
-	 * @since 2.0
 	 * @return array
+	 * @throws Exception
+	 * @since 2.0
 	 */
 	public function get_exclude_blocks() {
 		$exclude_blocks = $this->get_option( 'exclude_blocks' );
@@ -528,201 +542,83 @@ class Option_Service_Weglot {
 	}
 
 	/**
-	 * @since 2.0.4
+	 * @return array
+	 * @throws Exception
 	 * @version 3.0.0
-	 * @return array
+	 * @since 3.2.1
 	 */
-	public function get_destination_languages( $formated = false ) {
+
+	public function get_destination_languages() {
 		$destination_languages = $this->get_option( 'destination_language' );
-
-		if ( ! $formated ) {
-			$language_code_rewrited = apply_filters( 'weglot_language_code_replace', array() );
-			$destination_languages  = array_map(
-				function ( $v ) use ( $language_code_rewrited ) {
-					return isset( $language_code_rewrited[ $v ] ) ? $language_code_rewrited[ $v ] : $v;
-				},
-				$destination_languages
-			);
-		}
-
-		return apply_filters( 'weglot_destination_languages', $destination_languages );
+		return apply_filters( 'weglot_destination_languages_full', $destination_languages );
 	}
 
-
 	/**
-	 * @since 3.2.0
 	 * @return array
-	 */
-	public function get_current_destination_languages( $current_url = null ) {
-		$destination_languages = $this->get_destination_languages();
-		$request_url_service   = weglot_get_request_url_service();
-
-		if ( is_null( $current_url ) ) {
-			$current_url = $request_url_service->get_full_url_no_language();
-		}
-
-		$current_url               = $request_url_service->url_to_relative( $current_url );
-		$exclude_urls_by_languages = $this->get_exclude_urls_by_languages();
-		$current_language          = $request_url_service->get_current_language();
-		$language_code_rewrited    = apply_filters( 'weglot_language_code_replace', array() );
-		$custom_urls               = $request_url_service->option_services->get_option( 'custom_urls' );
-		$current_language_iso      = ( $key = array_search( $current_language, $language_code_rewrited ) ) ? $key : $current_language;
-
-		if ( isset( $custom_urls[ $current_language_iso ] ) ) {
-			foreach ( $custom_urls[ $current_language_iso ] as $key => $value ) {
-				$current_url = str_replace( '/' . $key . '/', '/' . $value . '/', $current_url );
-			}
-		}
-
-		foreach ( $exclude_urls_by_languages as $item ) {
-			if ( preg_match( '#' . $item['value'] . '#', $current_url ) != 0 ) {
-				$destination_languages = array_diff( $destination_languages, $item['excluded_languages'] );
-			}
-		}
-
-		return apply_filters( 'weglot_current_destination_languages', $destination_languages, $current_url );
-	}
-
-
-	/**
-	 * @param $custom_code
-	 * @return string
-	 * @since 3.2.0
-	 */
-	public function get_iso_code_from_custom_code( $custom_code ) {
-		$language_code_rewrited = apply_filters( 'weglot_language_code_replace', array() );
-		$key                    = array_search( $custom_code, $language_code_rewrited, true );
-		return $key ? $key : $custom_code;
-	}
-
-	/**
+	 * @throws Exception
 	 * @since 2.0
-	 * @return array
 	 */
 	public function get_exclude_urls() {
-		$list_exclude_urls     = $this->get_option( 'exclude_urls' );
-		$request_url_services  = weglot_get_service( 'Request_Url_Service_Weglot' );
-		$destination_languages = $this->get_destination_languages( true );
-		$exclude_urls          = array();
+		$list_exclude_urls    = $this->get_option( 'exclude_urls' );
+		/** @var $request_url_services Request_Url_Service_Weglot */
+		$request_url_services = weglot_get_service( 'Request_Url_Service_Weglot' );
+		$exclude_urls         = array();
+
 		if ( ! empty( $list_exclude_urls ) ) {
 			foreach ( $list_exclude_urls as $item ) {
 				if ( is_array( $item ) ) {
-					if ( ! empty( $item['excluded_languages'] ) ) {
-
-						if ( ! is_array( $item['excluded_languages'] ) ) {
-							continue;
-						}
-
-						$not_exclude = array_diff( $destination_languages, $item['excluded_languages'] );
-						if ( empty( $not_exclude ) ) {
-							//$exclude_urls[] = $item;
-						} else {
-							continue;
+					$excluded_languages = null;
+					if ( ! empty( $item['excluded_languages'] ) && is_array( $item['excluded_languages'] ) ) {
+						foreach ( $item['excluded_languages'] as $excluded_language ) {
+							/** @var Language_Service_Weglot $language_service */
+							$language_service     = weglot_get_service( 'Language_Service_Weglot' );
+							$excluded_languages[] = $language_service->get_language_from_internal( $excluded_language );
 						}
 					}
 					$regex          = new Regex( $item['type'], $request_url_services->url_to_relative( $item['value'] ) );
-					$exclude_urls[] = $regex->getRegex();
-				} else {
-					$exclude_urls[] = $item;
-				}
-			}
-		}
-		$exclude_urls[] = '/wp-login.php';
-		$exclude_urls[] = '/sitemaps_xsl.xsl';
-		$exclude_urls[] = '/sitemaps.xml';
-		$exclude_urls[] = '/wp-cron.php';
-		$exclude_urls[] = '/wp-comments-post.php';
-		$exclude_urls[] = '/ct_template'; // Compatibility Oxygen
-		$exclude_urls[] = '/main-sitemap.xsl'; // SEO by Rank Math
-
-		$translate_amp = weglot_get_translate_amp_translation();
-		if ( ! $translate_amp ) {
-			$exclude_urls[] = weglot_get_service( 'Amp_Service_Weglot' )->get_regex();
-		}
-
-		// array_map : Need only for those who use the filter
-		return apply_filters(
-			'weglot_exclude_urls',
-			array_map(
-				function( $value ) use ( $request_url_services ) {
-					return $request_url_services->url_to_relative( $value );
-				},
-				$exclude_urls
-			)
-		);
-	}
-
-
-	/**
-	 * @since 3.2.0
-	 * @return array
-	 */
-	public function get_exclude_urls_by_languages() {
-		$list_exclude_urls = $this->get_option( 'exclude_urls' );
-		$exclude_urls      = array();
-
-		if ( ! empty( $list_exclude_urls ) ) {
-
-			$request_url_services   = weglot_get_service( 'Request_Url_Service_Weglot' );
-			$language_code_rewrited = apply_filters( 'weglot_language_code_replace', array() );
-
-			foreach ( $list_exclude_urls as $item ) {
-				if (
-					is_array( $item )
-					&& ! empty( $item['excluded_languages'] )
-					&& is_array( $item['excluded_languages'] )
-				) {
-
-					$item['excluded_languages'] = array_map(
-						function ( $v ) use ( $language_code_rewrited ) {
-							return isset( $language_code_rewrited[ $v ] ) ? $language_code_rewrited[ $v ] : $v;
-						},
-						$item['excluded_languages']
-					);
-
-					$regex          = new Regex( $item['type'], $request_url_services->url_to_relative( $item['value'] ) );
-					$exclude_urls[] = array(
-						'value'              => $regex->getRegex(),
-						'excluded_languages' => $item['excluded_languages'],
-					);
-
-				} else {
-					continue;
+					$exclude_urls[] = array( $regex->getRegex(), $excluded_languages );
 				}
 			}
 		}
 
-		apply_filters( 'weglot_exclude_urls_by_languages', $exclude_urls );
+		$exclude_urls[] = array( '/wp-login.php', null );
+		$exclude_urls[] = array( '/sitemaps_xsl.xsl', null );
+		$exclude_urls[] = array( '/sitemaps.xml', null );
+		$exclude_urls[] = array( '/wp-cron.php', null );
+		$exclude_urls[] = array( '/wp-comments-post.php', null );
+		$exclude_urls[] = array( '/ct_template', null ); // Compatibility Oxygen
+		$exclude_urls[] = array( '/main-sitemap.xsl', null ); // SEO by Rank Math
 
-		// Need only for those who use the filter
-		foreach ( $exclude_urls as $exclude_url ) {
-			$exclude_url['value'] = $request_url_services->url_to_relative( $exclude_url['value'] );
+		if ( ! weglot_get_translate_amp_translation() ) {
+			$exclude_urls[] = array( weglot_get_service( 'Amp_Service_Weglot' )->get_regex(), null );
 		}
-
-		return $exclude_urls;
+		return apply_filters( 'weglot_exclude_urls', $exclude_urls );
 	}
 
 	/**
+	 * @return string
+	 * @throws Exception
 	 * @since 2.0
 	 *
-	 * @return string
 	 */
 	public function get_css_custom_inline() {
 		return apply_filters( 'weglot_css_custom_inline', $this->get_option( 'override_css' ) );
 	}
 
 	/**
+	 * @return string
+	 * @throws Exception
 	 * @since 2.0
 	 *
-	 * @return string
 	 */
 	public function get_flag_css() {
 		return apply_filters( 'weglot_flag_css', $this->get_option( 'flag_css' ) );
 	}
 
 	/**
-	 * @since 3.0.0
 	 * @return int
+	 * @throws Exception
+	 * @since 3.0.0
 	 */
 	public function get_translation_engine() {
 		return apply_filters( 'weglot_get_translation_engine', $this->get_option( 'translation_engine' ) );
@@ -764,7 +660,7 @@ class Option_Service_Weglot {
 	}
 	/**
 	 * @param string $key
-	 * @return any
+	 * @return mixed
 	 */
 	public function get_option_by_key_v3( $key ) {
 		$options = $this->get_options_bdd_v3();

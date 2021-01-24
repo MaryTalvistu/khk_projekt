@@ -3,7 +3,7 @@ const init_admin_select = function(){
     const $ = jQuery
     const generate_destination_language = () => {
         return weglot_languages.available.filter(itm => {
-            return itm.code !== weglot_languages.original
+            return itm.internal_code !== weglot_languages.original
         });
     }
 
@@ -15,27 +15,19 @@ const init_admin_select = function(){
 			.selectize({
 				delimiter: "|",
 				persist: false,
-				valueField: "code",
+				valueField: "internal_code",
 				labelField: "local",
-				searchField: ["code", "english", "local"],
+				searchField: ["internal_code", "english", "local"],
 				sortField: [{ field: "english", direction: "asc" }],
 				maxItems: weglot_languages.limit,
 				plugins: ["remove_button", "drag_drop"],
 				options: generate_destination_language(),
 				render: {
 					option: function(item, escape) {
-						return (
-							'<div class="weglot__choice__language">' +
-							'<span class="weglot__choice__language--english">' +
-							escape(item.english) +
-							"</span>" +
-							'<span class="weglot__choice__language--local">' +
-							escape(item.local) +
-							" [" +
-							escape(item.code) +
-							"]</span>" +
-							"</div>"
-						);
+						var english = escape(item.english);
+						var local = escape(item.local);
+						var external = escape(item.external_code);
+						return `<div class="weglot__choice__language"><span class="weglot__choice__language--english">${english}</span><span class="weglot__choice__language--local">${local}[${external}]</span></div>`;
 					}
 				}
 			})
@@ -59,7 +51,7 @@ const init_admin_select = function(){
 
 				let new_dest_language = ''
 				code_languages.forEach(element => {
-					const language = weglot_languages.available.find(itm => itm.code === element);
+					const language = weglot_languages.available.find(itm => itm.internal_code === element);
 					let label = ''
 					if(with_name){
 						if (is_fullname){
@@ -79,7 +71,7 @@ const init_admin_select = function(){
 
 
 				});
-				$(".country-selector ul").html(new_dest_language)
+				$(".country-selector ul").html(new_dest_language) //phpcs:ignore
 			});
     }
 
@@ -93,11 +85,11 @@ const init_admin_select = function(){
 			destination_selectize[0].selectize.removeOption(work_original_language);
 
 			const new_option = weglot_languages.available.find(itm => {
-				return itm.code === new_destination_option
+				return itm.internal_code === new_destination_option
 			});
 
 			const new_original_option = weglot_languages.available.find(itm => {
-				return itm.code === work_original_language;
+				return itm.internal_code === work_original_language;
 			});
 
 			destination_selectize[0].selectize.addOption(new_option);
@@ -107,16 +99,14 @@ const init_admin_select = function(){
 			const with_name = $("#with_name").is(":checked")
 			let label = ''
 			if(with_name){
-				label = is_fullname ? new_original_option.local : new_original_option.code.toUpperCase();
+				label = is_fullname ? new_original_option.local : new_original_option.internal_code.toUpperCase();
 			}
 
 			$(".wgcurrent.wg-li")
 				.removeClass(old_original_language)
 				.addClass(work_original_language)
 				.attr("data-code-language", work_original_language)
-				.find('span').html(label)
-
-
+				.find('span').text(label)
 		});
 
 

@@ -13,6 +13,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @since 2.0
  */
 class Multisite_Service_Weglot {
+	/**
+	 * @var Request_Url_Service_Weglot
+	 */
+	private $request_url_services;
 
 	/**
 	 * @since 2.0
@@ -23,6 +27,7 @@ class Multisite_Service_Weglot {
 
 	/**
 	 * @since 2.0
+	 * @deprecated
 	 *
 	 * @return array
 	 */

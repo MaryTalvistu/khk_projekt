@@ -6,28 +6,30 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Weglot\Util\Url;
-use Weglot\Util\Server;
-
-
 /**
  * Redirect URL
  *
  * @since 2.0
  */
 class Redirect_Service_Weglot {
-	/**
-	 * @since 2.0
-	 *
-	 * @var string
-	 */
-	protected $weglot_url = null;
 
 	/**
 	 *
 	 * @var boolean
 	 */
 	protected $no_redirect = false;
+	/**
+	 * @var Option_Service_Weglot
+	 */
+	private $option_services;
+	/**
+	 * @var Request_Url_Service_Weglot
+	 */
+	private $request_url_services;
+	/**
+	 * @var Language_Service_Weglot
+	 */
+	private $language_services;
 
 	/**
 	 * @since 2.0
@@ -35,7 +37,7 @@ class Redirect_Service_Weglot {
 	public function __construct() {
 		$this->option_services      = weglot_get_service( 'Option_Service_Weglot' );
 		$this->request_url_services = weglot_get_service( 'Request_Url_Service_Weglot' );
-		$this->private_services     = weglot_get_service( 'Private_Language_Service_Weglot' );
+		$this->language_services    = weglot_get_service( 'Language_Service_Weglot' );
 	}
 
 	/**
@@ -54,15 +56,15 @@ class Redirect_Service_Weglot {
 	 */
 	protected function language_exception( $server_lang ) {
 
-		if(in_array( $server_lang, ['zh-TW', 'zh-HK' ])) {
-			$server_lang = "tw";
+		if ( in_array( $server_lang, [ 'zh-TW', 'zh-HK' ] ) ) {
+			$server_lang = 'tw';
 		}
 
-		if(in_array( $server_lang, ['pt-BR'])) {
-			$server_lang = "br";
+		if ( in_array( $server_lang, [ 'pt-BR' ] ) ) {
+			$server_lang = 'br';
 		}
 
-		$server_lang = substr($server_lang, 0, 2);
+		$server_lang = substr( $server_lang, 0, 2 );
 
 		if ( in_array( $server_lang, ['nb', 'nn', ] ) ) { //phpcs:ignore
 			// Case Norwegian
@@ -83,7 +85,7 @@ class Redirect_Service_Weglot {
 		}
 
 		if ( isset( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ) ) { //phpcs:ignore
-			$server_lang = substr( $_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, apply_filters( 'weglot_number_of_character_for_language', 5 ) );
+			$server_lang = substr( sanitize_text_field( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ), 0, apply_filters( 'weglot_number_of_character_for_language', 5 ) );
 			$server_lang = $this->language_exception( $server_lang );
 		} else {
 			if ( isset( $_SERVER['HTTP_CF_IPCOUNTRY'] ) ) { // phpcs:ignore
@@ -92,25 +94,22 @@ class Redirect_Service_Weglot {
 			}
 		}
 
-		$destination_languages = $this->option_services->get_destination_languages( true );
+		$destination_languages_external = $this->language_services->get_destination_languages_external( $this->request_url_services->is_allowed_private() );
+		$browser_language               = $this->language_services->get_language_from_internal( $server_lang );
 
-		$language_code_rewrited = apply_filters( 'weglot_language_code_replace', array() );
-		$server_lang_modified = array_key_exists($server_lang, $language_code_rewrited) ? $language_code_rewrited[$server_lang] : $server_lang;
 		if (
-			in_array( $server_lang, $destination_languages ) && // phpcs:ignore
-			weglot_get_original_language() === $this->request_url_services->get_current_language() &&
-			! $this->private_services->is_active_private_mode_for_lang( $server_lang )
+			in_array( $browser_language->getExternalCode(), $destination_languages_external ) && // phpcs:ignore
+			$this->language_services->get_original_language() === $this->request_url_services->get_current_language()
 		) {
-			$url_auto_redirect = apply_filters( 'weglot_url_auto_redirect', $this->request_url_services->get_weglot_url()->getForLanguage( $server_lang_modified ) );
+			$url_auto_redirect = apply_filters( 'weglot_url_auto_redirect', $this->request_url_services->get_weglot_url()->getForLanguage( $browser_language ) );
 			header( "Location: $url_auto_redirect", true, 302 );
 			exit();
 		}
 
 		if (
- 			! in_array( $server_lang, $destination_languages ) // phpcs:ignore
-			&& $server_lang !== weglot_get_original_language()
-			&& weglot_get_original_language() === $this->request_url_services->get_current_language()
-			&& ! $this->private_services->is_active_private_mode_for_lang( $server_lang )
+			! in_array( $browser_language->getExternalCode(), $destination_languages_external ) // phpcs:ignore
+			&& $browser_language !== $this->language_services->get_original_language()
+			&& $this->language_services->get_original_language() === $this->request_url_services->get_current_language()
 			&& $this->option_services->get_option( 'autoswitch_fallback' ) !== null
 		) {
 			$url_auto_redirect = apply_filters( 'weglot_url_auto_redirect', $this->request_url_services->get_weglot_url()->getForLanguage( $this->option_services->get_option( 'autoswitch_fallback' ) ) );
@@ -130,13 +129,14 @@ class Redirect_Service_Weglot {
 		}
 
 		$this->no_redirect = true;
-
 		if ( isset( $_SERVER['REQUEST_URI'] ) ) { // phpcs:ignore
-			$_SERVER['REQUEST_URI'] = str_replace(
-				'?no_lredirect=true',
-				'',
+			$_SERVER['REQUEST_URI'] = str_replace('?no_lredirect=true' , '?' , str_replace(
+				'?no_lredirect=true&',
+				'?',
 				$_SERVER['REQUEST_URI'] //phpcs:ignore
-			);
+			));
+
+			$this->request_url_services->init_weglot_url(); //We reset the URL as we removed the parameter from URL
 		}
 	}
 }

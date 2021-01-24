@@ -12,7 +12,23 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @since 2.3.0
  */
 class Generate_Switcher_Service_Weglot {
-	protected $string_version = '<!--Weglot %s-->';
+	/**
+	 * @var Option_Service_Weglot
+	 */
+	private $option_services;
+	/**
+	 * @var Request_Url_Service_Weglot
+	 */
+	private $request_url_services;
+	/**
+	 * @var Language_Service_Weglot
+	 */
+	private $language_services;
+	/**
+	 * @var Button_Service_Weglot
+	 */
+	private $button_services;
+
 	/**
 	 * @since 2.3.0
 	 */
@@ -20,7 +36,6 @@ class Generate_Switcher_Service_Weglot {
 		$this->option_services      = weglot_get_service( 'Option_Service_Weglot' );
 		$this->request_url_services = weglot_get_service( 'Request_Url_Service_Weglot' );
 		$this->language_services    = weglot_get_service( 'Language_Service_Weglot' );
-		$this->custom_url_services  = weglot_get_service( 'Custom_Url_Service_Weglot' );
 		$this->button_services      = weglot_get_service( 'Button_Service_Weglot' );
 	}
 

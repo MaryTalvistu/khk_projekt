@@ -6,7 +6,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Weglot\Parser\Check\Regex\RegexChecker;
 use Weglot\Util\SourceType;
 
 

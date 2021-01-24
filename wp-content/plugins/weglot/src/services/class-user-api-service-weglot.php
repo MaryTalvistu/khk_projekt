@@ -79,33 +79,11 @@ class User_Api_Service_Weglot {
 	}
 
 	/**
-	 * @since 2.0.6
-	 *
-	 * @return int
-	 */
-	public function get_limit_destination_language() {
-		$user_info = $this->get_user_info();
-		$plans     = $this->get_plans();
-		$limit     = 1000;
-		if (
-			$user_info['plan_id'] <= 1 ||
-			in_array( $user_info['plan_id'], $plans['starter_free']['ids'] ) // phpcs:ignore
-		) {
-			$limit = $plans['starter_free']['limit_language'];
-		} elseif (
-			in_array( $user_info['plan_id'], $plans['business']['ids'] ) // phpcs:ignore
-		) {
-			$limit = $plans['business']['limit_language'];
-		}
-
-		return $limit;
-	}
-
-	/**
 	 *
 	 * @param string $url
 	 * @param array $parameters
 	 * @return array
+	 * @throws \Exception
 	 */
 	public function do_request( $url, $parameters ) {
 		if ( $parameters ) {
@@ -115,7 +93,7 @@ class User_Api_Service_Weglot {
 					$url,
 					array(
 						'method'      => 'POST',
-						'timeout'     => 45,
+						'timeout'     => 3,
 						'redirection' => 5,
 						'blocking'    => true,
 						'headers'     => array(
@@ -134,7 +112,7 @@ class User_Api_Service_Weglot {
 				$url,
 				array(
 					'method'      => 'GET',
-					'timeout'     => 45,
+					'timeout'     => 3,
 					'redirection' => 5,
 					'blocking'    => true,
 					'headers'     => array(

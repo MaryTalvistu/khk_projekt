@@ -16,6 +16,10 @@ use WeglotWP\Models\Hooks_Interface_Weglot;
  * @since 3.1.1
  */
 class UCP_Tracking implements Hooks_Interface_Weglot {
+	/**
+	 * @var Ucp_Active
+	 */
+	private $ucp_active_services;
 
 	/**
 	 * @since 3.1.1
@@ -44,8 +48,9 @@ class UCP_Tracking implements Hooks_Interface_Weglot {
 
 
 	/**
+	 * @param $options_available
+	 * @return mixed
 	 * @since 3.1.1
-	 * @return void
 	 */
 	public function weglot_ucp_tracking( $options_available ) {
 

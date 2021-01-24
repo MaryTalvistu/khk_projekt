@@ -53,15 +53,6 @@ $options_available = [
 	],
 ];
 
-$languages = weglot_get_languages_configured();
-foreach ( $languages as $key => $value ) {
-	if ( $value && $value->getIso639() === weglot_get_original_language() ) {
-		unset( $languages[ $key ] );
-	}
-}
-
-$languages = array_values( $languages );
-
 ?>
 
 <h3><?php esc_html_e( 'Translation Exclusion (Optional)', 'weglot' ); ?> </h3>
@@ -183,54 +174,6 @@ $languages = array_values( $languages );
 				<p class="description"><?php echo esc_html( $options_available['active_search']['description'] ); ?></p>
 			</td>
 		</tr>
-		<tr valign="top">
-			<th scope="row" class="titledesc">
-				<label for="<?php echo esc_attr( $options_available['private_mode']['key'] ); ?>">
-					<?php echo esc_html( $options_available['private_mode']['label'] ); ?>
-				</label>
-			</th>
-			<td class="forminp forminp-text">
-				<input
-					id="<?php echo esc_attr( $options_available['private_mode']['key'] ); ?>"
-					name="<?php echo esc_attr( sprintf( '%s[%s][active]', WEGLOT_SLUG, $options_available['private_mode']['key'] ) ); ?>"
-					type="checkbox"
-					<?php
-					if ( array_key_exists( 'active', $this->options[ $options_available['private_mode']['key'] ] ) ) {
-						checked( $this->options[ $options_available['private_mode']['key'] ]['active'], 1 );
-					}
-					?>
-				>
-				<p class="description"><?php echo esc_html( $options_available['private_mode']['description'] ); ?></p>
-				<div id="private-mode-detail">
-					<?php
-					foreach ( $languages as $key => $lang ) :
-
-						if ( ! $lang ) {
-							continue;
-						}
-
-						$checked_value = isset( $this->options[ $options_available['private_mode']['key'] ][ $lang->getIso639() ] ) ? $this->options[ $options_available['private_mode']['key'] ][ $lang->getIso639() ] : null;
-						?>
-						<div class="private-mode-detail-lang">
-							<input
-								name="<?php echo esc_attr( sprintf( '%s[languages][%s][enabled]', WEGLOT_SLUG, $key ) ); ?>"
-								id="<?php echo esc_attr( sprintf( '%s[%s][%s]', WEGLOT_SLUG, $options_available['private_mode']['key'], $lang->getIso639() ) ); ?>"
-								type="checkbox"
-								class="private-mode-lang--input"
-								<?php checked( $checked_value, 1 ); ?>
-							/>
-							<label for="<?php echo esc_attr( sprintf( '%s[%s][%s]', WEGLOT_SLUG, $options_available['private_mode']['key'], $lang->getIso639() ) ); ?>">
-								<?php
-								// translators: 1 Local name language
-								$str = __( 'Make "%s" a private language', 'weglot' );
-								echo esc_html( sprintf( $str, $lang->getEnglishName() ), 'weglot' );
-								?>
-							</label>
-						</div>
-					<?php endforeach; ?>
-				</div>
-			</td>
-		</tr>
 	</tbody>
 </table>
 
@@ -239,8 +182,8 @@ $languages = array_values( $languages );
 		<select
 			name="<?php echo esc_attr( sprintf( '%s[excluded_paths][{KEY}][type]', WEGLOT_SLUG ) ); ?>"
 		>
-			<?php foreach ( Helper_Excluded_Type::get_excluded_type() as $type ) : ?>
-				<option value="<?php echo esc_attr( $type ); ?>"><?php echo esc_attr( Helper_Excluded_Type::get_label_type( $type ) ); ?></option>
+			<?php foreach ( Helper_Excluded_Type::get_excluded_type() as $ex_type ) : ?>
+				<option value="<?php echo esc_attr( $ex_type ); ?>"><?php echo esc_attr( Helper_Excluded_Type::get_label_type( $ex_type ) ); ?></option>
 			<?php endforeach; ?>
 		</select>
 		<input

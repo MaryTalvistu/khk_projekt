@@ -1,5 +1,8 @@
 <?php
 
+use WeglotWP\Services\Language_Service_Weglot;
+use WeglotWP\Services\Request_Url_Service_Weglot;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -32,9 +35,11 @@ class Redirect_Handler_Weglot extends \WPSEO_Redirect_Handler {
 	protected $request_url = '';
 
 	public function load() {
-		$original_destination = weglot_get_current_and_original_language();
 
-		if ( empty( $original_destination['original'] ) || empty( $original_destination['destination'] ) ) {
+		/** @var $language_services Language_Service_Weglot */
+		$language_services = weglot_get_service( 'Language_Service_Weglot' );
+
+		if ( empty( $language_services->get_original_language() ) ) {
 			return;
 		}
 
@@ -70,7 +75,7 @@ class Redirect_Handler_Weglot extends \WPSEO_Redirect_Handler {
 	 */
 	protected function handle_normal_redirects( $request_url ) {
 		// Setting the redirects.
-		$redirects = $this->get_redirects( $this->normal_option_name );
+		$redirects       = $this->get_redirects( $this->normal_option_name );
 		$this->redirects = $this->normalize_redirects( $redirects );
 
 		// Trim the slashes, to match the variants of a request URL (Like: url, /url, /url/, url/).
@@ -83,7 +88,10 @@ class Redirect_Handler_Weglot extends \WPSEO_Redirect_Handler {
 		if ( isset( $request_url[2] ) && '/' === $request_url[2] ) {
 			$code_language = explode( '/', $request_url );
 
-			$langs = weglot_get_current_languages_configured( 'code' );
+			/** @var $language_services Language_Service_Weglot */
+			$language_services = weglot_get_service( 'Language_Service_Weglot' );
+
+			$langs = $language_services->get_destination_languages_external();
 
 			if ( ! in_array( $code_language[0], $langs ) ) { // phpcs:ignore
 				//Default behavior Yoast

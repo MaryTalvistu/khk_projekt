@@ -14,6 +14,10 @@ use WeglotWP\Helpers\Helper_Filter_Url_Weglot;
  * @since 3.0.0
  */
 class Caldera_I18n_Inline implements Hooks_Interface_Weglot {
+	/**
+	 * @var Caldera_Active
+	 */
+	private $caldera_active_services;
 
 	/**
 	 * @since 3.0.0

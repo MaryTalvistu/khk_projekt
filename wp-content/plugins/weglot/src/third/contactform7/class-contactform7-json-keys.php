@@ -16,6 +16,10 @@ use WeglotWP\Models\Hooks_Interface_Weglot;
  * @since 3.1.2
  */
 class Contactform7_Json_Keys implements Hooks_Interface_Weglot {
+	/**
+	 * @var Contactform7_Active
+	 */
+	private $contactform7_active_services;
 
 	/**
 	 * @since 3.1.2

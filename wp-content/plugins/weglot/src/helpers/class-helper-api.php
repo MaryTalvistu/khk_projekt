@@ -14,7 +14,6 @@ abstract class Helper_API {
 
 	const API_BASE         = 'https://api.weglot.com';
 	const API_BASE_STAGING = 'https://api.weglot.dev';
-	const API_BASE_OLD     = 'https://weglot.com/api/';
 	const CDN_BASE         = 'https://cdn.weglot.com/projects-settings/';
 
 	/**
@@ -39,14 +38,6 @@ abstract class Helper_API {
 		}
 
 		return self::API_BASE;
-	}
-
-	/**
-	 * @since 3.0.0
-	 * @return string
-	 */
-	public static function get_old_api_url() {
-		return self::API_BASE_OLD;
 	}
 }
 

@@ -6,8 +6,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Exception;
 use WeglotWP\Models\Hooks_Interface_Weglot;
-use WeglotWP\Helpers\Helper_Filter_Url_Weglot;
+use WeglotWP\Services\Language_Service_Weglot;
+use WeglotWP\Services\Option_Service_Weglot;
+use WeglotWP\Services\Replace_Url_Service_Weglot;
+use WeglotWP\Services\Request_Url_Service_Weglot;
 
 
 /**
@@ -16,10 +20,27 @@ use WeglotWP\Helpers\Helper_Filter_Url_Weglot;
  * @since 2.0
  */
 class WC_Filter_Urls_Weglot implements Hooks_Interface_Weglot {
+	/**
+	 * @var Request_Url_Service_Weglot
+	 */
+	private $request_url_services;
+	/**
+	 * @var Option_Service_Weglot
+	 */
+	private $option_services;
+	/**
+	 * @var Wc_Active
+	 */
+	private $wc_active_services;
+	/**
+	 * @var Replace_Url_Service_Weglot
+	 */
+	private $replace_url_services;
 
 	/**
-	 * @since 2.0
 	 * @return void
+	 * @throws Exception
+	 * @since 2.0
 	 */
 	public function __construct() {
 		$this->request_url_services = weglot_get_service( 'Request_Url_Service_Weglot' );
@@ -40,9 +61,9 @@ class WC_Filter_Urls_Weglot implements Hooks_Interface_Weglot {
 			return;
 		}
 
-		add_filter( 'woocommerce_get_cart_url', array( '\WeglotWP\Helpers\Helper_Filter_Url_Weglot', 'filter_url_without_ajax' ) );
-		add_filter( 'woocommerce_get_checkout_url', array( '\WeglotWP\Helpers\Helper_Filter_Url_Weglot', 'filter_url_without_ajax' ) );
-		add_filter( 'woocommerce_get_myaccount_page_permalink', array( '\WeglotWP\Helpers\Helper_Filter_Url_Weglot', 'filter_url_without_ajax' ) );
+		add_filter( 'woocommerce_get_cart_url', array( '\WeglotWP\Helpers\Helper_Filter_Url_Weglot', 'filter_url_lambda' ) );
+		add_filter( 'woocommerce_get_checkout_url', array( '\WeglotWP\Helpers\Helper_Filter_Url_Weglot', 'filter_url_lambda' ) );
+		add_filter( 'woocommerce_get_myaccount_page_permalink', array( '\WeglotWP\Helpers\Helper_Filter_Url_Weglot', 'filter_url_lambda' ) );
 		add_filter( 'woocommerce_payment_successful_result', array( $this, 'woocommerce_filter_url_array' ) );
 		add_filter( 'woocommerce_get_checkout_order_received_url', array( $this, 'woocommerce_filter_order_received_url' ) );
 		add_action( 'woocommerce_reset_password_notification', array( $this, 'woocommerce_filter_reset_password' ), 999 );
@@ -67,54 +88,20 @@ class WC_Filter_Urls_Weglot implements Hooks_Interface_Weglot {
 	 * @return string
 	 */
 	public function woocommerce_filter_order_received_url( $url_filter ) {
-		$current_and_original_language = weglot_get_current_and_original_language();
-		$choose_current_language       = $current_and_original_language['current'];
-		$url                           = $this->request_url_services->create_url_object( $url_filter );
-
-		$url_translated         = $url->getForLanguage( $choose_current_language );
-		$custom_urls            = $this->option_services->get_option( 'custom_urls' );
-		$language_code_rewrited = apply_filters( 'weglot_language_code_replace', array() );
-		$key                    = array_search( $current_and_original_language['current'], $language_code_rewrited, true );
-		$to_iso_language        = $key ? $key : $current_and_original_language['current'];
-		if ( isset( $custom_urls[ $to_iso_language ] ) ) {
-			foreach ( $custom_urls[ $to_iso_language ] as $key => $value ) {
-				$url_translated = str_replace( '/' . $value . '/', '/' . $key . '/', $url_translated );
-			}
-		}
-
-		if ( $current_and_original_language['current'] !== $current_and_original_language['original'] ) { // Not ajax
-
-			if ( substr( get_option( 'permalink_structure' ), -1 ) !== '/' ) {
-				return str_replace( '/?key', '?key', $url_translated );
-			} else {
-				return str_replace( '//?key', '/?key', str_replace( '?key', '/?key', $url_translated ) );
-			}
-		} else {
-			if ( isset( $_SERVER['HTTP_REFERER'] ) ) { //phpcs:ignore
-				// Ajax
-				$choose_current_language = $url->detectCurrentLanguage();
-				if ( $choose_current_language && $choose_current_language !== $current_and_original_language['original'] ) {
-					if ( substr( get_option( 'permalink_structure' ), -1 ) !== '/' ) {
-						return str_replace( '/?key', '?key', $url_translated );
-					} else {
-						return str_replace( '//?key', '/?key', str_replace( '?key', '/?key', $url_translated ) );
-					}
-				}
-			}
-		}
-		return $url_filter;
+		$url = $this->request_url_services->create_url_object( $url_filter );
+		return $url->getForLanguage( $this->request_url_services->get_current_language() );
 	}
 
 	public function last_password_url_filter( $url, $endpoint, $value, $permalink ) {
 
-		if ( $endpoint === 'lost-password' ) {
+		if ( 'lost-password' === $endpoint ) {
 			$current_headers = headers_list();
 			foreach ( $current_headers as $header ) {
 				if ( strpos( $header, 'wp-resetpass' ) !== false ) {
-					preg_match( '#wp-resetpass-(.*?)=(.*?);#', $header, $matchesName );
-					preg_match( '#path=(.*?);#', $header, $matchesPath );
-					if ( isset( $matchesName[0] ) && isset( $matchesPath[0] ) && isset( $matchesPath[1] ) ) {
-						 setcookie( 'wp-resetpass-' . $matchesName[1], urldecode( $matchesName[2] ), 0, '/' . weglot_get_current_language() . $matchesPath[1], '', is_ssl(), true );
+					preg_match( '#wp-resetpass-(.*?)=(.*?);#', $header, $matches_name );
+					preg_match( '#path=(.*?);#', $header, $matches_path );
+					if ( isset( $matches_name[0] ) && isset( $matches_path[0] ) && isset( $matches_path[1] ) ) {
+						 setcookie( 'wp-resetpass-' . $matches_name[1], urldecode( $matches_name[2] ), 0, '/' . $this->request_url_services->get_current_language()->getExternalCode() . $matches_path[1], '', is_ssl(), true ); // phpcs:ignore
 					}
 				}
 			}
@@ -130,15 +117,17 @@ class WC_Filter_Urls_Weglot implements Hooks_Interface_Weglot {
 	 * @return array
 	 */
 	public function woocommerce_filter_url_array( $result ) {
-		$current_and_original_language = weglot_get_current_and_original_language();
-		$choose_current_language       = $current_and_original_language['current'];
-		if ( $current_and_original_language['current'] !== $current_and_original_language['original'] ) { // Not ajax
+		/** @var  $language_service Language_Service_Weglot */
+		$language_service = weglot_get_service( 'Language_Service_Weglot' );
+
+		$choose_current_language = $this->request_url_services->get_current_language();
+		if ( $choose_current_language !== $language_service->get_original_language() ) { // Not ajax
 			$url = $this->request_url_services->create_url_object( $result['redirect'] );
 		} else {
 			if ( isset( $_SERVER['HTTP_REFERER'] ) ) { //phpcs:ignore
 				// Ajax
 				$url = $this->request_url_services->create_url_object( $_SERVER['HTTP_REFERER'] ); //phpcs:ignore
-				$choose_current_language = $url->detectCurrentLanguage();
+				$choose_current_language = $url->getCurrentLanguage();
 				$url                     = $this->request_url_services->create_url_object( $result['redirect'] );
 			}
 		}
@@ -159,16 +148,17 @@ class WC_Filter_Urls_Weglot implements Hooks_Interface_Weglot {
  * @return void
 	 */
 	public function woocommerce_filter_reset_password( $url ) {
-		$current_and_original_language = weglot_get_current_and_original_language();
+		/** @var  $language_service Language_Service_Weglot */
+		$language_service = weglot_get_service( 'Language_Service_Weglot' );
 
-		if ( $current_and_original_language['current'] === $current_and_original_language['original'] ) {
+		if ( $this->request_url_services->get_current_language() === $language_service->get_original_language() ) {
 			return $url;
 		}
 
 		$url_redirect = add_query_arg( 'reset-link-sent', 'true', wc_get_account_endpoint_url( 'lost-password' ) );
 		$url_redirect = $this->request_url_services->create_url_object( $url_redirect );
 
-		wp_redirect( $url_redirect->getForLanguage( $current_and_original_language['current'] ) ); //phpcs:ignore
+		wp_redirect( $url_redirect->getForLanguage( $this->request_url_services->get_current_language() ) ); //phpcs:ignore
 		exit;
 	}
 }

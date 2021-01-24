@@ -7,6 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Weglot\Client\Api\Exception\ApiError;
+use Weglot\Client\Api\LanguageEntry;
 use WeglotWP\Helpers\Helper_Json_Inline_Weglot;
 use WeglotWP\Helpers\Helper_Keys_Json_Weglot;
 
@@ -15,6 +16,38 @@ use WeglotWP\Helpers\Helper_Keys_Json_Weglot;
  * @since 2.3.0
  */
 class Translate_Service_Weglot {
+	/**
+	 * @var Parser_Service_Weglot
+	 */
+	private $parser_services;
+	/**
+	 * @var string
+	 */
+	private $current_language;
+	/**
+	 * @var string
+	 */
+	private $original_language;
+	/**
+	 * @var Request_Url_Service_Weglot
+	 */
+	private $request_url_services;
+	/**
+	 * @var Language_Service_Weglot
+	 */
+	private $language_services;
+	/**
+	 * @var Replace_Url_Service_Weglot
+	 */
+	private $replace_url_services;
+	/**
+	 * @var Option_Service_Weglot
+	 */
+	private $option_services;
+	/**
+	 * @var Generate_Switcher_Service_Weglot
+	 */
+	private $generate_switcher_service;
 
 
 	/**
@@ -24,9 +57,9 @@ class Translate_Service_Weglot {
 		$this->option_services           = weglot_get_service( 'Option_Service_Weglot' );
 		$this->request_url_services      = weglot_get_service( 'Request_Url_Service_Weglot' );
 		$this->replace_url_services      = weglot_get_service( 'Replace_Url_Service_Weglot' );
-		$this->replace_link_services     = weglot_get_service( 'Replace_Link_Service_Weglot' );
 		$this->parser_services           = weglot_get_service( 'Parser_Service_Weglot' );
 		$this->generate_switcher_service = weglot_get_service( 'Generate_Switcher_Service_Weglot' );
+		$this->language_services         = weglot_get_service( 'Language_Service_Weglot' );
 	}
 
 
@@ -35,37 +68,38 @@ class Translate_Service_Weglot {
 	 * @return void
 	 */
 	public function weglot_translate() {
-		$this->set_original_language( weglot_get_original_language() );
-		$this->set_current_language( $this->request_url_services->get_current_language() );
-
 		ob_start( array( $this, 'weglot_treat_page' ) );
 	}
 
 	/**
+	 * @param LanguageEntry $current_language
+	 * @return Translate_Service_Weglot
 	 * @since 2.3.0
-	 * @param string $current_language
 	 */
 	public function set_current_language( $current_language ) {
-		$this->current_language = $current_language;
+		$this->current_language = $current_language->getInternalCode();
 		return $this;
 	}
 
 	/**
+	 * @param LanguageEntry $original_language
+	 * @return Translate_Service_Weglot
 	 * @since 2.3.0
-	 * @param string $original_language
 	 */
 	public function set_original_language( $original_language ) {
-		$this->original_language = $original_language;
+		$this->original_language = $original_language->getInternalCode();
 		return $this;
 	}
 
 	/**
-	 * @see weglot_init / ob_start
-	 * @since 2.3.0
 	 * @param string $content
 	 * @return string
+	 * @throws \Exception
+	 * @since 2.3.0
+	 * @see weglot_init / ob_start
 	 */
 	public function weglot_treat_page( $content ) {
+		$this->set_original_language( $this->language_services->get_original_language() );
 		$this->set_current_language( $this->request_url_services->get_current_language() ); // Need to reset
 
 		// Choose type translate
@@ -82,17 +116,15 @@ class Translate_Service_Weglot {
 		$parser = $this->parser_services->get_parser();
 
 		try {
-			$to_translate_language_iso = $this->option_services->get_iso_code_from_custom_code( $this->current_language );
-
 			switch ( $type ) {
 				case 'json':
 					$extraKeys          = apply_filters( 'weglot_add_json_keys', array() );
-					$translated_content = $parser->translate( $content, $this->original_language, $to_translate_language_iso, $extraKeys );
-					$translated_content = json_encode( $this->replace_url_services->replace_link_in_json( json_decode( $translated_content, true ) ) );
+					$translated_content = $parser->translate( $content, $this->original_language, $this->current_language, $extraKeys );
+					$translated_content = wp_json_encode( $this->replace_url_services->replace_link_in_json( json_decode( $translated_content, true ) ) );
 					$translated_content = apply_filters( 'weglot_json_treat_page', $translated_content );
 					return $translated_content;
 				case 'html':
-					$translated_content = $parser->translate( $content, $this->original_language, $to_translate_language_iso ); // phpcs:ignore
+					$translated_content = $parser->translate( $content, $this->original_language, $this->current_language ); // phpcs:ignore
 					$translated_content = apply_filters( 'weglot_html_treat_page', $translated_content );
 					return $this->weglot_render_dom( $translated_content );
 				default:

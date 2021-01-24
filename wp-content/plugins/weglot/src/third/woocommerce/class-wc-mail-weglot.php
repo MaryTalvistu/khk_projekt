@@ -8,6 +8,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use WeglotWP\Helpers\Helper_Is_Admin;
 use WeglotWP\Models\Hooks_Interface_Weglot;
+use WeglotWP\Services\Language_Service_Weglot;
+use WeglotWP\Services\Request_Url_Service_Weglot;
 
 
 /**
@@ -16,13 +18,27 @@ use WeglotWP\Models\Hooks_Interface_Weglot;
  * @since 3.1.6
  */
 class WC_Mail_Weglot implements Hooks_Interface_Weglot {
+	/**
+	 * @var Wc_Active
+	 */
+	private $wc_active_services;
+	/**
+	 * @var Request_Url_Service_Weglot
+	 */
+	private $request_url_services;
+	/**
+	 * @var Language_Service_Weglot
+	 */
+	private $language_services;
 
 	/**
 	 * @since 3.1.6
 	 * @return void
 	 */
 	public function __construct() {
-		$this->wc_active_services = weglot_get_service( 'Wc_Active' );
+		$this->wc_active_services   = weglot_get_service( 'Wc_Active' );
+		$this->request_url_services = weglot_get_service( 'Request_Url_Service_Weglot' );
+		$this->language_services    = weglot_get_service( 'Language_Service_Weglot' );
 	}
 
 	/**
@@ -39,8 +55,10 @@ class WC_Mail_Weglot implements Hooks_Interface_Weglot {
 	}
 
 	/**
-	 * @since 3.1.6
+	 * @param $args
+	 * @param $mail
 	 * @return array
+	 * @since 3.1.6
 	 */
 	public function translate_following_mail( $args, $mail ) {
 
@@ -56,11 +74,13 @@ class WC_Mail_Weglot implements Hooks_Interface_Weglot {
 
 			if ( $mail->is_customer_email() ) { // If mail is for customer
 				$woocommerce_order_language = get_post_meta( $mail->object->get_id(), 'weglot_language', true );
-
 				if ( ! empty( $woocommerce_order_language ) ) {
 
-					$current_and_original_language            = weglot_get_current_and_original_language();
-					$current_and_original_language['current'] = $woocommerce_order_language;
+					$current_and_original_language            = array(
+						'original' => $this->language_services->get_original_language()->getInternalCode(),
+						'current'  => $this->request_url_services->get_current_language()->getInternalCode(),
+					);
+					$current_and_original_language['current'] = $this->language_services->get_language_from_external( $woocommerce_order_language )->getInternalCode();
 
 					add_filter(
 						'weglot_translate_email_languages_forced',
@@ -70,7 +90,7 @@ class WC_Mail_Weglot implements Hooks_Interface_Weglot {
 					);
 				}
 			} else { // If mail is for admin
-				$current_and_original_language['original'] = weglot_get_original_language();
+				$current_and_original_language['original'] = $this->language_services->get_original_language()->getInternalCode();
 				$current_and_original_language['current']  = $current_and_original_language['original'];
 
 				add_filter(
@@ -95,9 +115,9 @@ class WC_Mail_Weglot implements Hooks_Interface_Weglot {
 			return;
 		}
 
-		$current_language = weglot_get_current_language();
-		if ( weglot_get_original_language() !== $current_language ) {
-			add_post_meta( $order_id, 'weglot_language', weglot_get_current_language() );
+		$current_language = $this->request_url_services->get_current_language()->getInternalCode();
+		if ( $this->language_services->get_original_language()->getInternalCode() !== $current_language ) {
+			add_post_meta( $order_id, 'weglot_language', $this->request_url_services->get_current_language()->getExternalCode() );
 		}
 
 		return $order_id;

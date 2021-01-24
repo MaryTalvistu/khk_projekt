@@ -13,8 +13,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Amp_Service_Weglot {
 
 	/**
+	 * @param bool $with_escape
+	 * @return string
 	 * @since 2.0
-	 * @param mixed $with_escape
 	 */
 	public function get_regex( $with_escape = false ) {
 		$regex = '([&\?/])amp(/)?$';

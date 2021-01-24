@@ -294,7 +294,7 @@ msgstr ""
 #: templates/admin/pages/tabs/settings.php:147
 #, php-format
 msgid ""
-"On the Business plan, you can choose five languages. If you need more, "
+"On the Business plan, you can choose 3 languages. If you need more, "
 "please %1$supgrade your plan%2$s."
 msgstr ""
 
@@ -527,7 +527,7 @@ msgstr ""
 
 #: templates/admin/pages/tabs/appearance.php:18
 msgid ""
-"Check if you want the name of the languge. Don't check if you want the "
+"Check if you want the name of the language. Don't check if you want the "
 "language code."
 msgstr ""
 

@@ -16,6 +16,10 @@ use WeglotWP\Models\Hooks_Interface_Weglot;
  * @since 3.1.4
  */
 class Maintenance_Tracking implements Hooks_Interface_Weglot {
+	/**
+	 * @var Maintenance_Active
+	 */
+	private $maintenance_active_services;
 
 	/**
 	 * @since 3.1.4
@@ -44,8 +48,9 @@ class Maintenance_Tracking implements Hooks_Interface_Weglot {
 
 
 	/**
+	 * @param $options_available
+	 * @return mixed
 	 * @since 3.1.4
-	 * @return void
 	 */
 	public function weglot_maintenance_tracking( $options_available ) {
 

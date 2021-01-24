@@ -120,12 +120,12 @@ $options = weglot_get_options();
 		  <tbody>
 				<tr>
 					 <td><?php esc_html_e( 'Original Language', 'weglot' ); ?></td>
-					 <td><?php echo esc_attr( weglot_get_original_language() ); ?></td>
+					 <td><?php echo esc_attr( $this->language_services->get_original_language()->getInternalCode() ); ?></td>
 				</tr>
 				<tr>
 					<td><?php esc_html_e( 'Destination Language', 'weglot' ); ?></td>
 					<td>
-						<?php foreach ( weglot_get_destination_language() as $language ) : ?>
+						<?php foreach ( $this->language_services->get_destination_languages_external( true ) as $language ) : ?>
 							<?php echo esc_attr( sprintf( '%s - ', $language ) ); ?>
 						<?php endforeach; ?>
 					</td>
@@ -133,8 +133,9 @@ $options = weglot_get_options();
 				<tr>
 					 <td><?php esc_html_e( 'Exclude URLs', 'weglot' ); ?></td>
 					 <td>
-						<?php if ( ! empty($options[ 'exclude_urls' ] ) ):
-							foreach ( $options[ 'exclude_urls' ] as $type => $exclude_url ) :
+						<?php
+						if ( ! empty( $options['exclude_urls'] ) ) :
+							foreach ( $options['exclude_urls'] as $t => $exclude_url ) :
 								if ( empty( $exclude_url['type'] ) || empty( $exclude_url['value'] ) ) {
 									continue;
 								}
@@ -142,21 +143,22 @@ $options = weglot_get_options();
 								echo esc_html( $exclude_url['type'] . ' - ' . $exclude_url['value'] ) . '<br/>';
 
 							endforeach;
-						else:
+						else :
 							esc_html_e( 'Empty', 'weglot' );
-						endif; ?>
+						endif;
+						?>
 					</td>
 
 				</tr>
 				<tr>
 					 <td><?php esc_html_e( 'Exclude Blocks', 'weglot' ); ?></td>
-					 <td><?php echo esc_attr( implode( $options[ 'exclude_blocks' ], ' - ' ) ); ?></td>
+					 <td><?php echo esc_attr( implode( $options['exclude_blocks'], ' - ' ) ); ?></td>
 				</tr>
 		  </tbody>
 	 </table>
 	 <br />
 	<div class="widefat">
 		<h2><?php esc_html_e( 'Custom URLS', 'weglot' ); ?></h2>
-		<pre><?php var_export( $options['custom_urls'] ); ?></pre>
+		<pre><?php var_export( $options['custom_urls'] ); // phpcs:ignore ?></pre>
 	</div>
 </div>

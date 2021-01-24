@@ -33,7 +33,7 @@ const init_admin_button_preview = function () {
 
 			function unvalidApiKey(){
 				$(".weglot-keyres").remove();
-				$("#api_key_private").after('<span class="weglot-keyres weglot-nokkey"></span>');
+				$("#api_key_private").after('<span class="weglot-keyres weglot-nokkey"></span><p class="weglot-keyres">Make sure you enter a valid Weglot API key. If the key is still not validating, you can contact your host provider and ask if it\'s possible to whitelist api.weglot.com and weglot.com</p>');
 				$("#wrap-weglot #submit").prop("disabled", true);
 			}
 

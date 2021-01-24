@@ -7,6 +7,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use WeglotWP\Models\Hooks_Interface_Weglot;
+use WeglotWP\Services\Email_Translate_Service_Weglot;
+use WeglotWP\Services\Language_Service_Weglot;
+use WeglotWP\Services\Option_Service_Weglot;
+use WeglotWP\Services\Request_Url_Service_Weglot;
 
 
 /**
@@ -16,6 +20,22 @@ use WeglotWP\Models\Hooks_Interface_Weglot;
  *
  */
 class Email_Translate_Weglot implements Hooks_Interface_Weglot {
+	/**
+	 * @var Option_Service_Weglot
+	 */
+	private $option_services;
+	/**
+	 * @var Request_Url_Service_Weglot
+	 */
+	private $request_url_services;
+	/**
+	 * @var Email_Translate_Service_Weglot
+	 */
+	private $email_translate_services;
+	/**
+	 * @var Language_Service_Weglot
+	 */
+	private $language_services;
 
 	/**
 	 * @since 2.0
@@ -24,6 +44,7 @@ class Email_Translate_Weglot implements Hooks_Interface_Weglot {
 		$this->option_services          = weglot_get_service( 'Option_Service_Weglot' );
 		$this->request_url_services     = weglot_get_service( 'Request_Url_Service_Weglot' );
 		$this->email_translate_services = weglot_get_service( 'Email_Translate_Service_Weglot' );
+		$this->language_services        = weglot_get_service( 'Language_Service_Weglot' );
 	}
 
 	/**
@@ -51,7 +72,9 @@ class Email_Translate_Weglot implements Hooks_Interface_Weglot {
 			return $args;
 		}
 
-		$current_and_original_language        = weglot_get_current_and_original_language();
+		$current_language  = $this->request_url_services->get_current_language();
+		$original_language = $this->language_services->get_original_language();
+
 		$current_and_original_language_forced = apply_filters( 'weglot_translate_email_languages_forced', false );
 
 		$message_and_subject = array(
@@ -74,18 +97,18 @@ class Email_Translate_Weglot implements Hooks_Interface_Weglot {
 			if ( $current_and_original_language_forced['current'] !== $current_and_original_language_forced['original'] ) {
 				$message_and_subject_translated = $this->email_translate_services->translate_email( $message_and_subject, $current_and_original_language_forced['current'] );
 			}
-		} elseif ( $current_and_original_language['current'] !== $current_and_original_language['original'] ) {
+		} elseif ( $current_language !== $original_language ) {
 
-			$message_and_subject_translated = $this->email_translate_services->translate_email( $message_and_subject, $current_and_original_language['current'] );
+			$message_and_subject_translated = $this->email_translate_services->translate_email( $message_and_subject, $current_language->getInternalCode() );
 
 		} elseif ( isset( $_SERVER['HTTP_REFERER'] ) ) { //phpcs:ignore
 
 			$url = $this->request_url_services ->create_url_object( $_SERVER['HTTP_REFERER'] ); //phpcs:ignore
-			$choose_current_language = $url->detectCurrentLanguage();
+			$current_language = $url->getCurrentLanguage();
 
-			if ( $choose_current_language !== $current_and_original_language['original'] ) { //If language in referer
+			if ( $current_language !== $original_language ) { //If language in referer
 
-				$message_and_subject_translated = $this->email_translate_services->translate_email( $message_and_subject, $choose_current_language );
+				$message_and_subject_translated = $this->email_translate_services->translate_email( $message_and_subject, $current_language->getInternalCode() );
 
 			} elseif ( strpos( $_SERVER['HTTP_REFERER'], 'wg_language=' ) !== false ) { //phpcs:ignore
 				//If language in parameter
@@ -94,7 +117,7 @@ class Email_Translate_Weglot implements Hooks_Interface_Weglot {
 				$start                   = $pos + strlen( 'wg_language=' );
 				$choose_current_language = substr( $_SERVER['HTTP_REFERER'], $start, 2 ); //phpcs:ignore
 
-				if ( $choose_current_language && $choose_current_language !== $current_and_original_language['original'] ) {
+				if ( $choose_current_language && $choose_current_language !== $original_language->getInternalCode() ) {
 					$message_and_subject_translated = $this->email_translate_services->translate_email( $message_and_subject, $choose_current_language );
 				}
 			}

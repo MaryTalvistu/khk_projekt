@@ -69,7 +69,7 @@ class DomFormatter extends AbstractFormatter
 
         if ($details['class']::ESCAPE_SPECIAL_CHAR) {
             $details['node']->$property = htmlspecialchars($translated);
-        } else {    
+        } else {
             $details['node']->$property = $translated;
         }
 
@@ -97,13 +97,21 @@ class DomFormatter extends AbstractFormatter
         $words = $this->getTranslated()->getInputWords();
 
             if ($details['class'] === '\Weglot\Parser\Check\Dom\ImageSource') {
-                $details['node']->src = $translated;
                 if ($details['node']->hasAttribute('srcset') &&
                     $details['node']->srcset != '' &&
                     $translated != $words[$index]->getWord()) {
                     $details['node']->srcset = '';
                 }
             }
+
+        if ($details['class'] === '\Weglot\Parser\Check\Dom\ImageDataSource') {
+            $dataSrcSet = "data-srcset";;
+            if ($details['node']->hasAttribute('data-srcset') &&
+                $details['node']->$dataSrcSet != '' &&
+                $translated != $words[$index]->getWord()) {
+                $details['node']->$dataSrcSet = '';
+            }
+        }
     }
 
     protected function getTranslatableAttributes() {

@@ -6,6 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Exception;
 use WeglotWP\Models\Hooks_Interface_Weglot;
 
 
@@ -42,15 +43,6 @@ class Bootstrap_Weglot {
 	}
 
 	/**
-	 * Get services
-	 * @since 2.0
-	 * @return array
-	 */
-	public function get_actions() {
-		return $this->actions;
-	}
-
-	/**
 	 * Set services
 	 * @since 2.0
 	 * @param array $services
@@ -77,25 +69,16 @@ class Bootstrap_Weglot {
 		return $this;
 	}
 
-
-	/**
-	 * Get services
-	 * @since 2.0
-	 * @return array
-	 */
-	public function get_services() {
-		return $this->services;
-	}
-
 	/**
 	 * Get one service by classname
-	 * @since 2.0
 	 * @param string $name
 	 * @return object
+	 * @throws Exception
+	 * @since 2.0
 	 */
 	public function get_service( $name ) {
 		if ( ! array_key_exists( $name, $this->services ) ) {
-			throw new \Exception( 'Service : ' . $name . ' not exist' );
+			throw new Exception( 'Service : ' . $name . ' not exist' );
 		}
 
 		if ( is_string( $this->services[ $name ] ) ) {

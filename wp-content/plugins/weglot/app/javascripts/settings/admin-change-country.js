@@ -12,6 +12,7 @@ const init_admin_change_country = function() {
 		var ar_flags = new Array();
 		var tw_flags = new Array();
 		var zh_flags = new Array();
+		var pt_flags = new Array();
 
 		en_flags[1] = [3570, 7841, 48, 2712];
 		en_flags[2] = [3720, 449, 3048, 4440];
@@ -66,21 +67,24 @@ const init_admin_change_country = function() {
 		zh_flags[1] = [2970, 6369, 3408, 4008]; // Taiwan
 		zh_flags[2] = [3600, 3233, 2112, 48]; // Hong Kong
 
+		pt_flags[1] = [6630, 993, 2784, 4344];
+
 		var enval = $("select.flag-en-type").val();
 		var esval = $("select.flag-es-type").val();
 		var frval = $("select.flag-fr-type").val();
 		var arval = $("select.flag-ar-type").val();
 		var twval = $("select.flag-tw-type").val();
 		var zhval = $("select.flag-zh-type").val();
-
+		var ptval = $("select.flag-pt-type").val();
 		var en_style = enval <= 0 ? "" : ".weglot-flags.en > a:before, .weglot-flags.en > span:before { background-position: -" + en_flags[enval][0] + "px 0 !important; } .weglot-flags.flag-1.en > a:before, .weglot-flags.flag-1.en > span:before { background-position: -" + en_flags[enval][1] + "px 0 !important; } .weglot-flags.flag-2.en > a:before, .weglot-flags.flag-2.en > span:before { background-position: -" + en_flags[enval][2] + "px 0 !important; } .weglot-flags.flag-3.en > a:before, .weglot-flags.flag-3.en > span:before { background-position: -" + en_flags[enval][3] + "px 0 !important; } ";
 		var es_style = esval <= 0 ? "" : ".weglot-flags.es > a:before, .weglot-flags.es > span:before { background-position: -" + es_flags[esval][0] + "px 0 !important; } .weglot-flags.flag-1.es > a:before, .weglot-flags.flag-1.es > span:before { background-position: -" + es_flags[esval][1] + "px 0 !important; } .weglot-flags.flag-2.es > a:before, .weglot-flags.flag-2.es > span:before { background-position: -" + es_flags[esval][2] + "px 0 !important; } .weglot-flags.flag-3.es > a:before, .weglot-flags.flag-3.es > span:before { background-position: -" + es_flags[esval][3] + "px 0 !important; } ";
 		var fr_style = frval <= 0 ? "" : ".weglot-flags.fr > a:before, .weglot-flags.fr > span:before { background-position: -" + fr_flags[frval][0] + "px 0 !important; } .weglot-flags.flag-1.fr > a:before, .weglot-flags.flag-1.fr > span:before { background-position: -" + fr_flags[frval][1] + "px 0 !important; } .weglot-flags.flag-2.fr > a:before, .weglot-flags.flag-2.fr > span:before { background-position: -" + fr_flags[frval][2] + "px 0 !important; } .weglot-flags.flag-3.fr > a:before, .weglot-flags.flag-3.fr > span:before { background-position: -" + fr_flags[frval][3] + "px 0 !important; } ";
 		var ar_style = arval <= 0 ? "" : ".weglot-flags.ar > a:before, .weglot-flags.ar > span:before { background-position: -" + ar_flags[arval][0] + "px 0 !important; } .weglot-flags.flag-1.ar > a:before, .weglot-flags.flag-1.ar > span:before { background-position: -" + ar_flags[arval][1] + "px 0 !important; } .weglot-flags.flag-2.ar > a:before, .weglot-flags.flag-2.ar > span:before { background-position: -" + ar_flags[arval][2] + "px 0 !important; } .weglot-flags.flag-3.ar > a:before, .weglot-flags.flag-3.ar > span:before { background-position: -" + ar_flags[arval][3] + "px 0 !important; } ";
 		var tw_style = twval <= 0 ? "" : ".weglot-flags.tw > a:before, .weglot-flags.tw > span:before { background-position: -" + tw_flags[twval][0] + "px 0 !important; } .weglot-flags.flag-1.tw > a:before, .weglot-flags.flag-1.tw > span:before { background-position: -" + tw_flags[twval][1] + "px 0 !important; } .weglot-flags.flag-2.tw > a:before, .weglot-flags.flag-2.tw > span:before { background-position: -" + tw_flags[twval][2] + "px 0 !important; } .weglot-flags.flag-3.tw > a:before, .weglot-flags.flag-3.tw > span:before { background-position: -" + tw_flags[twval][3] + "px 0 !important; } ";
 		var zh_style = zhval <= 0 ? "" : ".weglot-flags.zh > a:before, .weglot-flags.zh > span:before { background-position: -" + zh_flags[zhval][0] + "px 0 !important; } .weglot-flags.flag-1.zh > a:before, .weglot-flags.flag-1.zh > span:before { background-position: -" + zh_flags[zhval][1] + "px 0 !important; } .weglot-flags.flag-2.zh > a:before, .weglot-flags.flag-2.zh > span:before { background-position: -" + zh_flags[zhval][2] + "px 0 !important; } .weglot-flags.flag-3.zh > a:before, .weglot-flags.flag-3.zh > span:before { background-position: -" + zh_flags[zhval][3] + "px 0 !important; } ";
+		var pt_style = ptval <= 0 ? "" : ".weglot-flags.pt > a:before, .weglot-flags.pt > span:before { background-position: -" + pt_flags[ptval][0] + "px 0 !important; } .weglot-flags.flag-1.pt > a:before, .weglot-flags.flag-1.pt > span:before { background-position: -" + pt_flags[ptval][1] + "px 0 !important; } .weglot-flags.flag-2.pt > a:before, .weglot-flags.flag-2.pt > span:before { background-position: -" + pt_flags[ptval][2] + "px 0 !important; } .weglot-flags.flag-3.pt > a:before, .weglot-flags.flag-3.pt > span:before { background-position: -" + pt_flags[ptval][3] + "px 0 !important; } ";
 
-		$("#flag_css, #weglot-css-flag-css").text(en_style + es_style + fr_style + ar_style + tw_style + zh_style);
+		$("#flag_css, #weglot-css-flag-css").text(en_style + es_style + fr_style + ar_style + tw_style + zh_style + pt_style);
 	}
 
 	const execute = () => {
@@ -91,7 +95,7 @@ const init_admin_change_country = function() {
 			}
 		);
 
-		$("select.flag-en-type, select.flag-es-type, select.flag-fr-type, select.flag-ar-type, select.flag-tw-type, select.flag-zh-type").on('change',
+		$("select.flag-en-type, select.flag-es-type, select.flag-pt-type, select.flag-fr-type, select.flag-ar-type, select.flag-tw-type, select.flag-zh-type").on('change',
 			function () {
 				refresh_flag_css()
 			}

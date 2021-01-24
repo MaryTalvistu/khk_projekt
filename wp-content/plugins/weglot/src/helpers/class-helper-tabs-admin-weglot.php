@@ -34,23 +34,6 @@ abstract class Helper_Tabs_Admin_Weglot {
 	 */
 	const SUPPORT = 'support';
 
-
-	/**
-	 * Get tabs constant
-	 *
-	 * @since 2.0
-	 * @static
-	 * @return array
-	 */
-	public static function get_tabs() {
-		return array(
-			self::SETTINGS,
-			self::STATUS,
-			self::CUSTOM_URLS,
-			self::SUPPORT,
-		);
-	}
-
 	/**
 	 * Get full tabs information
 	 * @static

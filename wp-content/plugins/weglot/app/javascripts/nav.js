@@ -7,21 +7,21 @@ jQuery(document).ready(function ($) {
 				const id = $(this).attr('id').substring(19);
 				$(this).children('p:not( .field-move )').remove(); // remove default fields we don't need
 
-				$(this).append($('<input>').attr({
+				$(this).append($('<input>').attr({ // phpcs:ignore
 					type: 'hidden',
 					id: 'edit-menu-item-title-' + id,
 					name: 'menu-item-title[' + id + ']',
 					value: weglot_data.title
 				}));
 
-				$(this).append($("<input>").attr({
+				$(this).append($("<input>").attr({ // phpcs:ignore
 					type: "hidden",
 					id: "edit-menu-item-url-" + id,
 					name: "menu-item-url[" + id + "]",
 					value: "#weglot_switcher"
 				}));
 
-				$(this).append($('<input>').attr({
+				$(this).append($('<input>').attr({ // phpcs:ignore
 					type: 'hidden',
 					id: 'edit-menu-item-weglot-detect-' + id,
 					name: 'menu-item-weglot-detect[' + id + ']',
@@ -35,8 +35,8 @@ jQuery(document).ready(function ($) {
 						.attr("for", `edit-menu-item-${option.key}-${id}`)
 						.text(` ${option.title}`);
 
-					$(this).prepend(paragraph);
-					paragraph.append(label);
+					$(this).prepend(paragraph); // phpcs:ignore
+					paragraph.append(label); // phpcs:ignore
 
 					const checkbox = $("<input>").attr({
 						type: "checkbox",
@@ -54,7 +54,7 @@ jQuery(document).ready(function ($) {
 						checkbox.prop("checked", true);
 					}
 
-					label.prepend(checkbox);
+					label.prepend(checkbox); // phpcs:ignore
 				})
 			});
 

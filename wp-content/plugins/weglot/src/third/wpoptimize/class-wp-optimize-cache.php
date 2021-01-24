@@ -8,6 +8,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use WeglotWP\Helpers\Helper_Is_Admin;
 use WeglotWP\Models\Hooks_Interface_Weglot;
+use WeglotWP\Services\Language_Service_Weglot;
+use WeglotWP\Services\Request_Url_Service_Weglot;
 
 
 /**
@@ -16,6 +18,10 @@ use WeglotWP\Models\Hooks_Interface_Weglot;
  * @since 3.1.4
  */
 class Wp_Optimize_Cache implements Hooks_Interface_Weglot {
+	/**
+	 * @var Wp_Optimize_Active
+	 */
+	private $wp_optimize_active_services;
 
 	/**
 	 * @since 3.1.4
@@ -41,12 +47,18 @@ class Wp_Optimize_Cache implements Hooks_Interface_Weglot {
 
 
 	/**
-	 * @since 3.1.4
+	 * @param $can_cache_page
 	 * @return bool
+	 * @since 3.1.4
 	 */
 	public function weglot_wpo_can_cache_page( $can_cache_page ) {
 
-		if ( weglot_get_original_language() !== weglot_get_current_language() ) {
+		/** @var $request_url_services Request_Url_Service_Weglot */
+		$request_url_services = weglot_get_service( 'Request_Url_Service_Weglot' );
+		/** @var $language_services Language_Service_Weglot */
+		$language_services = weglot_get_service( 'Language_Service_Weglot' );
+
+		if ( $request_url_services->get_current_language() !== $language_services->get_original_language() ) {
 			return false;
 		}
 

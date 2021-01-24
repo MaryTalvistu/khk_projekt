@@ -11,6 +11,10 @@ use WeglotWP\Helpers\Helper_Filter_Url_Weglot;
 
 
 class Edd_Filter_Urls implements Hooks_Interface_Weglot {
+	/**
+	 * @var Edd_Active
+	 */
+	private $edd_active_services;
 
 	/**
 	 * @return void

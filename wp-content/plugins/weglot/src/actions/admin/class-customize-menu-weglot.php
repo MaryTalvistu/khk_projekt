@@ -7,7 +7,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use WeglotWP\Models\Hooks_Interface_Weglot;
-use WeglotWP\Helpers\Helper_Pages_Weglot;
+use WeglotWP\Services\Menu_Options_Service_Weglot;
+use WeglotWP\Services\Option_Service_Weglot;
 
 /**
  *
@@ -17,15 +18,20 @@ use WeglotWP\Helpers\Helper_Pages_Weglot;
 class Customize_Menu_Weglot implements Hooks_Interface_Weglot {
 
 	/**
+	 * @var Option_Service_Weglot
+	 */
+	private $option_services;
+	/**
+	 * @var Menu_Options_Service_Weglot
+	 */
+	private $menu_options_services;
+
+	/**
 	 * @since 2.0
 	 */
 	public function __construct() {
-		$this->language_services         = weglot_get_service( 'Language_Service_Weglot' );
-		$this->option_services           = weglot_get_service( 'Option_Service_Weglot' );
-		$this->request_url_services      = weglot_get_service( 'Request_Url_Service_Weglot' );
-		$this->button_services           = weglot_get_service( 'Button_Service_Weglot' );
-		$this->private_language_services = weglot_get_service( 'Private_Language_Service_Weglot' );
-		$this->menu_options_services     = weglot_get_service( 'Menu_Options_Service_Weglot' );
+		$this->option_services       = weglot_get_service( 'Option_Service_Weglot' );
+		$this->menu_options_services = weglot_get_service( 'Menu_Options_Service_Weglot' );
 		return $this;
 	}
 
@@ -79,8 +85,8 @@ class Customize_Menu_Weglot implements Hooks_Interface_Weglot {
 			$options_menu[ 'menu-item-' . $menu_item_db_id ]['hide_current'] = 0;
 		}
 
+		delete_transient( 'weglot_cache_cdn' );
 		$this->option_services->set_option_by_key( 'menu_switcher', $options_menu );
-
 	}
 
 	/**

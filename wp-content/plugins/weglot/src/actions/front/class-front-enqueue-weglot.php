@@ -7,6 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use WeglotWP\Models\Hooks_Interface_Weglot;
+use WeglotWP\Services\Option_Service_Weglot;
 
 /**
  * Enqueue CSS / JS on front
@@ -14,6 +15,10 @@ use WeglotWP\Models\Hooks_Interface_Weglot;
  * @since 2.0
  */
 class Front_Enqueue_Weglot implements Hooks_Interface_Weglot {
+	/**
+	 * @var Option_Service_Weglot
+	 */
+	private $option_services;
 
 	/**
 	 * @since 2.0
