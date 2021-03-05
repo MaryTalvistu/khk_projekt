@@ -1,0 +1,642 @@
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: WP Blog and Widget\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2020-10-23 09:18+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: \n"
+"Language: \n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Loco https://localise.biz/\n"
+"X-Loco-Version: 2.4.3; wp-5.5.1"
+
+#: includes/wpbaw-post-types.php:25
+msgid "Add New Blog"
+msgstr ""
+
+#: includes/wpbaw-post-types.php:80
+msgid "Add New Category"
+msgstr ""
+
+#: includes/wpbaw-post-types.php:75
+msgid "All Category"
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:70
+msgid "All Shortcodes"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Ascending"
+msgstr ""
+
+#: includes/wpbaw-post-types.php:82
+msgid "Blog Category"
+msgstr ""
+
+#: includes/admin/class-wpbaw-admin.php:105
+msgid "Blog Category Shortcode"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Blog Heading"
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:73
+msgid "Blog in List View"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Blog Post"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "blog post"
+msgstr ""
+
+#: includes/shortcode/wpbaw-blog-shortcode.php:149
+#: includes/shortcode/wpbaw-blog-shortcode.php:168
+#: includes/shortcode/wpbaw-recent-blog-shortcode.php:137
+#: includes/shortcode/wpbaw-recent-blog-shortcode.php:156
+msgid "By"
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:127
+msgid "Check plugin document for shortcode parameters and demo for designs."
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Choose design. Upgarade to "
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Choose link behavior. Upgarade to "
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid ""
+"Choose WordPress registered image size. e.g thumbnail, medium, large, full. "
+"Upgarade to "
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Click here"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Content Tail"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Content Words Limit"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid ""
+"Control height of the featured image. You can enter any numeric number. e.g "
+"500. Leave empty for default height. Upgarade to "
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:129
+msgid "Demo for Designs"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Descending"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Design"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Design 1"
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:74
+msgid "Display blog in grid 1"
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:75
+msgid "Display blog in grid 2"
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:76
+msgid "Display blog in grid 3"
+msgstr ""
+
+#. Description of the plugin
+msgid ""
+"Display Blog on your website with list and in grid view. Also work with "
+"Gutenberg shortcode block."
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Display blog post in a grid view."
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Display dots after the post content as continue reading. Upgarade to "
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Display read more. Upgarade to "
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Display recent blog post in a grid view."
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:77
+msgid "Display recent blog posts"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Display Specific Category"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Display Specific Posts"
+msgstr ""
+
+#: includes/widgets/class-wpbaw-blog.php:17
+msgid "Displayed Latest Blog post  in a sidebar"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Disply Child Category"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Do you also want to check premium version demo of this plugin."
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Do you want to check demo of this plugin."
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:128
+msgid "Documentation"
+msgstr ""
+
+#: includes/wpbaw-post-types.php:26
+msgid "Edit Blog"
+msgstr ""
+
+#: includes/wpbaw-post-types.php:78
+msgid "Edit Category"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Enable pagination. Upgarade to "
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:147
+#, php-format
+msgid ""
+"Enjoyed this plugin? You can help by rate this plugin <a href=\"%s\" "
+"target=\"_blank\">5 stars!"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid ""
+"Enter author id to display posts of particular author. You can pass multiple "
+"ids with comma seperated. You can find id at users listing page. Upgarade to "
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid ""
+"Enter author id to hide post of particular author. Works only if `Include "
+"Author` field is empty. You can pass multiple ids with comma seperated. You "
+"can find id at relevant users listing page. Upgarade to "
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Enter blog heading. Upgarade to "
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Enter category id to display categories wise."
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Enter content word limit."
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid ""
+"Enter id of the post which you do not want to display. You can pass multiple "
+"ids with comma seperated. You can find id at relevant post listing page. "
+"Upgarade to "
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid ""
+"Enter id of the post which you want to display. You can pass multiple ids "
+"with comma seperated. You can find id at relevant post listing page. "
+"Upgarade to "
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Enter number of blog post to be displayed. Enter -1 to display all."
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Enter read more text. Upgarade to "
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Exclude Author"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Exclude Category"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid ""
+"Exclude number of posts from starting. e.g if you pass 5 then it will skip "
+"first five post. Note: This will not work with limit=-1. Upgarade to "
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Exclude Post"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid ""
+"Exclude post category. Works only if `Category` field is empty. You can pass "
+"multiple ids with comma seperated. You can find id at relevant category "
+"listing page. Upgarade to "
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "False"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Fill the blog image in a whole container. Upgarade to "
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "General Parameters"
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:44
+msgid "Getting Started"
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:185
+msgid "Go Premium "
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:91
+msgid "Gutenberg Support"
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:143
+msgid "Help to improve this plugin!"
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:99
+msgid "How it Work"
+msgstr ""
+
+#: includes/admin/class-wpbaw-admin.php:42
+msgid "How It Works"
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:36
+msgid "How It Works - Display and Shortcode"
+msgstr ""
+
+#: includes/admin/class-wpbaw-admin.php:42
+msgid "How it works, our plugins and offers"
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:58
+msgid "How Shortcode Works"
+msgstr ""
+
+#. Author URI of the plugin
+msgid "https://www.wponlinesupport.com/"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid ""
+"If you are using parent category then whether to display child category or "
+"not. Upgarade to "
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Image Fit"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Image Height"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Include Author"
+msgstr ""
+
+#: wp-blog-and-widgets.php:157
+#, php-format
+msgid ""
+"It looks like you had PRO version %s of this plugin activated. To avoid "
+"conflicts the extra version has been deactivated and we recommend you delete "
+"it."
+msgstr ""
+
+#: includes/widgets/class-wpbaw-blog.php:19
+msgid "Latest Blog Widget"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Limit"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Link Behavior"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Media Size"
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:119
+msgid "Need Support?"
+msgstr ""
+
+#: includes/wpbaw-post-types.php:27
+msgid "New Blog"
+msgstr ""
+
+#: includes/wpbaw-post-types.php:81
+msgid "New Category Name"
+msgstr ""
+
+#: includes/wpbaw-functions.php:51
+msgid "Next »"
+msgstr ""
+
+#: includes/wpbaw-post-types.php:30
+msgid "No Blog Items found"
+msgstr ""
+
+#: includes/wpbaw-post-types.php:31
+msgid "No Blog Items found in Trash"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Number of Columns"
+msgstr ""
+
+#: includes/widgets/class-wpbaw-blog.php:37
+msgid "Number of Items: "
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Numeric Pagination"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Order"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Order By"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Pagination"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Pagination Type"
+msgstr ""
+
+#: includes/wpbaw-post-types.php:76
+msgid "Parent Category"
+msgstr ""
+
+#: includes/wpbaw-post-types.php:77
+msgid "Parent Category:"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Post Date"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Post ID"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Post Modified Date"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Post Slug"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Post Title"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Premium version "
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Previous - Next Pagination"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Query Offset"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Query Parameters"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Random"
+msgstr ""
+
+#: includes/shortcode/wpbaw-blog-shortcode.php:175
+#: includes/shortcode/wpbaw-recent-blog-shortcode.php:163
+#: assets/js/blocks.build.js:1 assets/js/blocks.build.js:1
+msgid "Read More"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Read More Text"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Recent Blog Post"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "recent blog post"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Same Window"
+msgstr ""
+
+#: includes/wpbaw-post-types.php:29
+msgid "Search Blog"
+msgstr ""
+
+#: includes/wpbaw-post-types.php:74
+msgid "Search Category"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Select number of column per row."
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Show Author"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Show Category Name"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Show Content"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Show Date"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "Show Full Content"
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:62
+msgid "Step-1. Create a page like Blog OR Our Blog."
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:103
+msgid "Step-1. Go to the Gutenberg editor of your page."
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:48
+msgid ""
+"Step-1: This plugin create a BLOG menu tab in WordPress menu with custom "
+"post type.\"."
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:63
+msgid "Step-2. Put below shortcode as per your need."
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:104
+msgid "Step-2. Search \"blog post\" keyword in the Gutenberg block list."
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:49
+msgid "Step-2: Go to \"Blog --> Add blog tab\"."
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:105
+msgid ""
+"Step-3. Add any block of blog post and you will find its relative options on "
+"the right end side."
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:50
+msgid ""
+"Step-3: Add blog title, description, category, and images as featured image."
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:51
+msgid ""
+"Step-4: <b>NOTE</b> :- If you want to create a blog page with WordPress "
+"existing POST section then try our other plugin --"
+msgstr ""
+
+#: wp-blog-and-widgets.php:156
+#, php-format
+msgid "Thank you for activating %s"
+msgstr ""
+
+#: includes/widgets/class-wpbaw-blog.php:36
+msgid "Title:"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "to get this option."
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "True"
+msgstr ""
+
+#: includes/wpbaw-post-types.php:79
+msgid "Update Category"
+msgstr ""
+
+#: includes/admin/class-wpbaw-admin.php:45
+msgid "Upgrade to PRO"
+msgstr ""
+
+#: includes/admin/class-wpbaw-admin.php:45
+msgid "Upgrade to PRO - WP Blog and Widget"
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:160
+msgid "Upgrate to Pro"
+msgstr ""
+
+#: includes/wpbaw-post-types.php:28
+msgid "View Blog"
+msgstr ""
+
+#: includes/admin/wpbaw-how-it-work.php:186
+msgid "View PRO Demo "
+msgstr ""
+
+#. Name of the plugin
+msgid "WP Blog and Widget"
+msgstr ""
+
+#: includes/admin/settings/premium.php:15
+msgid "WP Blog and Widget - Features"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "WP Blog and Widget - Grid"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid "WP Blog and Widget - Recent Blog"
+msgstr ""
+
+#. Author of the plugin
+msgid "WP OnlineSupport"
+msgstr ""
+
+#: includes/admin/supports/gutenberg-block.php:200
+msgid "WPOS Blocks"
+msgstr ""
+
+#: assets/js/blocks.build.js:1
+msgid ""
+"You can pass multiple ids with comma seperated. You can find id at relevant "
+"category listing page."
+msgstr ""
+
+#: includes/wpbaw-functions.php:50
+msgid "« Previous"
+msgstr ""
